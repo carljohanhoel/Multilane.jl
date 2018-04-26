@@ -12,7 +12,7 @@ using POMCPOW
 @everywhere using Multilane
 @everywhere using POMDPToolbox
 
-@show N = 2000
+@show N = 1000
 @show n_iters = 1000
 @show max_time = Inf
 @show max_depth = 40
@@ -34,11 +34,11 @@ dpws_x10 = deepcopy(dpws)
 dpws_x10.n_iterations *= 10
 
 solvers = Dict{String, Solver}(
-    # "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
-    # "omniscient" => dpws,
+    "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
+    "omniscient" => dpws,
     # "omniscient-x10" => dpws_x10,
     # "mlmpc" => MLMPCSolver(dpws),
-    # "meanmpc" => MeanMPCSolver(dpws),
+    "meanmpc" => MeanMPCSolver(dpws),
     # "qmdp" => QBSolver(dpws),
     # "pftdpw" => begin
     #     m = 10
@@ -47,28 +47,27 @@ solvers = Dict{String, Solver}(
     #     up = AggressivenessUpdater(nothing, m, 0.1, 0.1, wup, rng)
     #     ABMDPSolver(dpws, up)
     # end,
-    # "pomcpow" => POMCPOWSolver(tree_queries=n_iters,
-    #                            criterion=MaxUCB(8.0),
-    #                            max_depth=max_depth,
-    #                            max_time=max_time,
-    #                            enable_action_pw=false,
-    #                            k_observation=4.5,
-    #                            alpha_observation=1/10.0,
-    #                            estimate_value=FORollout(val),
-    #                            # estimate_value=val,
-    #                            check_repeat_obs=false,
-    #                            # node_sr_belief_updater=AggressivenessPOWFilter(wup)
-    #                           ),
-    "outcome" => OutcomeSolver(dpws)
+    "pomcpow" => POMCPOWSolver(tree_queries=n_iters,
+                               criterion=MaxUCB(8.0),
+                               max_depth=max_depth,
+                               max_time=max_time,
+                               enable_action_pw=false,
+                               k_observation=4.5,
+                               alpha_observation=1/10.0,
+                               estimate_value=FORollout(val),
+                               # estimate_value=val,
+                               check_repeat_obs=false,
+                               # node_sr_belief_updater=AggressivenessPOWFilter(wup)
+                              )
 )
 
 
-function make_updater(cor, problem, k, rng_seed)
+function make_updater(cor, problem, rng_seed)
     wup = WeightUpdateParams(smoothing=0.0, wrong_lane_factor=0.05)
-    if cor >= 1.0 || k == "meanmpc"
+    if cor >= 1.0
         return AggressivenessUpdater(problem, 2000, 0.05, 0.1, wup, MersenneTwister(rng_seed+50000))
     else
-        return BehaviorParticleUpdater(problem, 5000, 0.0, 0.0, wup, MersenneTwister(rng_seed+50000))
+        return BehaviorParticleUpdater(problem, 5000, 0.05, 0.2, wup, MersenneTwister(rng_seed+50000))
     end
 end
 
@@ -76,7 +75,7 @@ pow_updater(up::AggressivenessUpdater) = AggressivenessPOWFilter(up.params)
 pow_updater(up::BehaviorParticleUpdater) = BehaviorPOWFilter(up.params)
 
 # for cor in [false, 0.75, true]
-for cor in [true, 0.75, false]
+for cor in [0.75]
     for lambda in 2.0.^(-1:3)
     # for lambda in [1.0]
         @show cor
@@ -97,8 +96,7 @@ for cor in [true, 0.75, false]
         problems = Dict{String, Any}(
             "baseline"=>mdp,
             "omniscient"=>mdp,
-            "omniscient-x10"=>mdp,
-            "outcome"=>mdp
+            "omniscient-x10"=>mdp
         )
         solver_problems = Dict{String, Any}(
             "qmdp"=>mdp
@@ -128,7 +126,7 @@ for cor in [true, 0.75, false]
                 hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false)
 
                 if p isa POMDP
-                    up = make_updater(cor, sim_problem, k, rng_seed)
+                    up = make_updater(cor, sim_problem, rng_seed)
                     if k == "pomcpow"
                         solver.node_sr_belief_updater = pow_updater(up)
                     end
@@ -227,7 +225,7 @@ for cor in [true, 0.75, false]
             end
 
             datestring = Dates.format(now(), "E_d_u_HH_MM")
-            filename = joinpath("/tmp", "gap_checkpoint_"*datestring*".csv")
+            filename = joinpath("/tmp", "uncor_gap_checkpoint_"*datestring*".csv")
             println("Writing data to $filename")
             CSV.write(filename, alldata)
         end
@@ -237,6 +235,6 @@ end
 # @show alldata
 
 datestring = Dates.format(now(), "E_d_u_HH_MM")
-filename = Pkg.dir("Multilane", "data", "gap_"*datestring*".csv")
+filename = Pkg.dir("Multilane", "data", "uncor_gap_"*datestring*".csv")
 println("Writing data to $filename")
 CSV.write(filename, alldata)

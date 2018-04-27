@@ -18,6 +18,7 @@ using ImageView
 using Images
 include("../src/visualization.jl")
 
+
 @everywhere using Missings
 @everywhere using Multilane
 @everywhere using POMDPToolbox
@@ -47,29 +48,8 @@ solvers = Dict{String, Solver}(
     "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
     "omniscient" => dpws,
     # "omniscient-x10" => dpws_x10,
-    # "mlmpc" => MLMPCSolver(dpws),
-    "meanmpc" => MeanMPCSolver(dpws),
-    # "qmdp" => QBSolver(dpws),
-    # "pftdpw" => begin
-    #     m = 10
-    #     wup = WeightUpdateParams(smoothing=0.0, wrong_lane_factor=0.5)
-    #     rng = MersenneTwister(123)
-    #     up = AggressivenessUpdater(nothing, m, 0.1, 0.1, wup, rng)
-    #     ABMDPSolver(dpws, up)
-    # end,
-    "pomcpow" => POMCPOWSolver(tree_queries=n_iters,
-                               criterion=MaxUCB(8.0),
-                               max_depth=max_depth,
-                               max_time=max_time,
-                               enable_action_pw=false,
-                               k_observation=4.5,
-                               alpha_observation=1/10.0,
-                               estimate_value=FORollout(val),
-                               # estimate_value=val,
-                               check_repeat_obs=false,))
-                               # node_sr_belief_updater=AggressivenessPOWFilter(wup)
-                              #)
-#)
+    "mlmpc" => MLMPCSolver(dpws),
+    "meanmpc" => MeanMPCSolver(dpws),)
 
 
 function make_updater(cor, problem, rng_seed)
@@ -83,11 +63,6 @@ end
 
 pow_updater(up::AggressivenessUpdater) = AggressivenessPOWFilter(up.params)
 pow_updater(up::BehaviorParticleUpdater) = BehaviorPOWFilter(up.params)
-
-# for cor in [false, 0.75, true]
-# for cor in [0.75]
-    # for lambda in 2.0.^(-1:3)
-    # for lambda in [1.0]
 
 cor = 0.75
 lambda = 1.0
@@ -104,70 +79,48 @@ dmodel = NoCrashIDMMOBILModel(10, pp,
                               max_dist=1000.0
                              )
 rmodel = SuccessReward(lambda=lambda)
-pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
+pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 
-problems = Dict{String, Any}(
-    "baseline"=>mdp,
-    "omniscient"=>mdp,
-    "omniscient-x10"=>mdp)
-solver_problems = Dict{String, Any}(
-    "qmdp"=>mdp)
+problems = Dict{String,Any}("omniscient"=>mdp, "mlmpc"=>pomdp)
 
-
-
-# for (k, solver) in solvers
-k = "omniscient"
-solver = solvers[k]
-
-@show k
-p = get(problems, k, pomdp)
-sp = get(solver_problems, k, p)
-sim_problem = deepcopy(p)
+# method = "omniscient"
+method = "mlmpc"
+solver = solvers[method]
+problem = problems[method]
+sim_problem = deepcopy(problem)
 sim_problem.throw=true
 
-sims = []
 
 # for i in 1:N
 i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
-is = initial_state(sim_problem, rng)
-ips = MLPhysicalState(is)
+initial_state = initial_state(sim_problem, rng)
+ips = MLPhysicalState(initial_state)
 
-metadata = Dict(:rng_seed=>rng_seed,
+metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :lambda=>lambda,
-                :solver=>k,
+                :solver=>solver,
                 :dt=>pp.dt,
                 :cor=>cor
            )
 hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false)
 
-if p isa POMDP
-    up = make_updater(cor, sim_problem, rng_seed)
-    if k == "pomcpow"
-        solver.node_sr_belief_updater = pow_updater(up)
-    end
-    planner = deepcopy(solve(solver, sp))
-    srand(planner, rng_seed+60000)
-    push!(sims, Sim(sim_problem, planner, up, ips, is,
-                    simulator=hr,
-                    metadata=metadata
-                   ))
+
+if sim_problem isa POMDP
+    updater = make_updater(cor, sim_problem, rng_seed)
+    planner = deepcopy(solve(solver, sim_problem))
+    srand(planner, rng_seed+60000)   #Sets rng seed of planner
+    hist = simulate(hr, sim_problem, planner, updater, ips, initial_state)
+    # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
 else
-    planner = deepcopy(solve(solver, sp))
-    srand(planner, rng_seed+60000)
-    push!(sims, Sim(sim_problem, planner, is,
-                    simulator=hr,
-                    metadata=metadata
-                   ))
+    planner = deepcopy(solve(solver, sim_problem))
+    srand(planner, rng_seed+60000)   #Sets rng seed of planner
+    hist = simulate(hr, sim_problem, planner, initial_state)
 end
-@assert last(sims).mdp.throw   #CCC @assert problem(last(sims)).throw #Something weird ehre, problem() seems not to be defined. Extract problem, in this case .mdp.
-# end
 
 
-policy = solve(dpws, sim_problem)
-hist = simulate(hr, sim_problem, policy, is)   #Run simulation, here with standard IDM&MOBIL model as policy
 
 frames = Frames(MIME("image/png"), fps=1/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
@@ -175,97 +128,41 @@ frames = Frames(MIME("image/png"), fps=1/pp.dt)
 end
 gifname = "./Figs/testMCTS.ogv"
 write(gifname, frames)
-#-----
 
-# data = run(sims) do sim, hist
-data = run_parallel(sims) do sim, hist
-    # print("step")
-    # return [:n_steps=>n_steps(hist), :reward=>discounted_reward(hist)]
-    if isnull(exception(hist))
-        p = sim.mdp
-        steps_in_lane = 0
-        steps_to_lane = missing
-        nb_brakes = 0
-        crashed = false
-        min_speed = Inf
-        min_ego_speed = Inf
-        for (k,(s,sp)) in enumerate(eachstep(hist, "s,sp"))
 
-            nb_brakes += detect_braking(p, s, sp)
+#----------
 
-            if sp.cars[1].y == p.rmodel.target_lane
-                steps_in_lane += 1
-            end
-            if sp.cars[1].y == p.rmodel.target_lane
-                if ismissing(steps_to_lane)
-                    steps_to_lane = k
-                end
-            end
 
-            if is_crash(p, s, sp)
-                crashed = true
-            end
-
-            min_speed = min(minimum(c.vel for c in sp.cars), min_speed)
-            min_ego_speed = min(min_ego_speed, sp.cars[1].vel)
-        end
-        time_to_lane = steps_to_lane*p.dmodel.phys_param.dt
-        distance = last(state_hist(hist)).x
-
-        return [:n_steps=>n_steps(hist),
-                :mean_iterations=>mean(ai[:tree_queries] for ai in eachstep(hist, "ai")),
-                :mean_search_time=>1e-6*mean(ai[:search_time_us] for ai in eachstep(hist, "ai")),
-                :reward=>discounted_reward(hist),
-                :crashed=>crashed,
-                :steps_to_lane=>steps_to_lane,
-                :steps_in_lane=>steps_in_lane,
-                :nb_brakes=>nb_brakes,
-                :exception=>false,
-                :distance=>distance,
-                :mean_ego_speed=>distance/(n_steps(hist)*p.dmodel.phys_param.dt),
-                :min_speed=>min_speed,
-                :min_ego_speed=>min_ego_speed,
-                :terminal=>string(get(last(state_hist(hist)).terminal, missing))
-               ]
-    else
-        warn("Error in Simulation")
-        showerror(STDERR, get(exception(hist)))
-        # show(STDERR, MIME("text/plain"), stacktrace(get(backtrace(hist))))
-        return [:exception=>true,
-                :ex_type=>string(typeof(get(exception(hist))))
-               ]
-    end
-end
-
-success = 100.0*sum(data[:terminal].=="lane")/N
-brakes = 100.0*sum(data[:nb_brakes].>=1)/N
-@printf("%% reaching:%5.1f; %% braking:%5.1f\n", success, brakes)
-
-@show extrema(data[:distance])
-@show mean(data[:mean_iterations])
-@show mean(data[:mean_search_time])
-@show mean(data[:reward])
-if minimum(data[:min_speed]) < 15.0
-    @show minimum(data[:min_speed])
-end
-
-if isempty(alldata)
-    alldata = data
-else
-    alldata = vcat(alldata, data)
-end
-
-datestring = Dates.format(now(), "E_d_u_HH_MM")
-filename = joinpath("/tmp", "uncor_gap_checkpoint_"*datestring*".csv")
-println("Writing data to $filename")
-CSV.write(filename, alldata)
+#
+# success = 100.0*sum(data[:terminal].=="lane")/N
+# brakes = 100.0*sum(data[:nb_brakes].>=1)/N
+# @printf("%% reaching:%5.1f; %% braking:%5.1f\n", success, brakes)
+#
+# @show extrema(data[:distance])
+# @show mean(data[:mean_iterations])
+# @show mean(data[:mean_search_time])
+# @show mean(data[:reward])
+# if minimum(data[:min_speed]) < 15.0
+#     @show minimum(data[:min_speed])
 # end
-#     end
+#
+# if isempty(alldata)
+#     alldata = data
+# else
+#     alldata = vcat(alldata, data)
 # end
-
-# @show alldata
-
-datestring = Dates.format(now(), "E_d_u_HH_MM")
-filename = Pkg.dir("Multilane", "data", "uncor_gap_"*datestring*".csv")
-println("Writing data to $filename")
-CSV.write(filename, alldata)
+#
+# datestring = Dates.format(now(), "E_d_u_HH_MM")
+# filename = joinpath("/tmp", "uncor_gap_checkpoint_"*datestring*".csv")
+# println("Writing data to $filename")
+# CSV.write(filename, alldata)
+# # end
+# #     end
+# # end
+#
+# # @show alldata
+#
+# datestring = Dates.format(now(), "E_d_u_HH_MM")
+# filename = Pkg.dir("Multilane", "data", "uncor_gap_"*datestring*".csv")
+# println("Writing data to $filename")
+# CSV.write(filename, alldata)

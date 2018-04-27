@@ -1,3 +1,5 @@
+include("../src/Multilane.jl") #CCC
+
 using Multilane
 using MCTS
 using POMDPToolbox
@@ -122,7 +124,7 @@ for cor in [0.75]
                                 :solver=>k,
                                 :dt=>pp.dt,
                                 :cor=>cor
-                           )   
+                           )
                 hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false)
 
                 if p isa POMDP

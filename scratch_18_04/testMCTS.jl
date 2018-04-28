@@ -16,12 +16,18 @@ using ProgressMeter
 using AutomotiveDrivingModels
 using ImageView
 using Images
-include("../src/visualization.jl")
+#include("../src/visualization.jl")
+
+#For tree viz
+using D3Trees
+@everywhere using D3Trees
 
 
 @everywhere using Missings
 @everywhere using Multilane
 @everywhere using POMDPToolbox
+
+DEBUG = true
 
 @show N = 1000
 @show n_iters = 1000
@@ -38,8 +44,9 @@ dpws = DPWSolver(depth=max_depth,
                  alpha_state=1/10.0,
                  enable_action_pw=false,
                  check_repeat_state=false,
-                 estimate_value=RolloutEstimator(val)
+                 estimate_value=RolloutEstimator(val),
                  # estimate_value=val
+                 tree_in_info = DEBUG
                 )
 dpws_x10 = deepcopy(dpws)
 dpws_x10.n_iterations *= 10
@@ -75,7 +82,7 @@ pp = PhysicalParam(4, lane_length=100.0)
 dmodel = NoCrashIDMMOBILModel(10, pp,
                               behaviors=behaviors,
                               p_appear=1.0,
-                              lane_terminate=true,
+                              lane_terminate=false,
                               max_dist=1000.0
                              )
 rmodel = SuccessReward(lambda=lambda)
@@ -84,8 +91,8 @@ pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, fa
 
 problems = Dict{String,Any}("omniscient"=>mdp, "mlmpc"=>pomdp)
 
-# method = "omniscient"
-method = "mlmpc"
+method = "omniscient"
+# method = "mlmpc"
 solver = solvers[method]
 problem = problems[method]
 sim_problem = deepcopy(problem)
@@ -120,6 +127,13 @@ else
     hist = simulate(hr, sim_problem, planner, initial_state)
 end
 
+
+#Visualization
+t = 22.5
+step = convert(Int, t / pp.dt) + 1
+write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"/home/cj/2018/Multilane/Figs/state_at_t.png")
+print(hist.action_hist[step])
+inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
 
 
 frames = Frames(MIME("image/png"), fps=1/pp.dt)

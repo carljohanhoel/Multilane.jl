@@ -199,7 +199,8 @@ include("tree_vis.jl")
 
 include_visualization() = include(joinpath(Pkg.dir("Multilane"),"src","visualization.jl"))
 
-if gethostname() == "Theresa"
+#if gethostname() == "Theresa"
+if true #CCC Always include visualization. May remove this later.
     println("Automatically loading visualization components.")
     include("visualization.jl")
     export

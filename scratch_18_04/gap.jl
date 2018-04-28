@@ -58,10 +58,10 @@ solvers = Dict{String, Solver}(
                                alpha_observation=1/10.0,
                                estimate_value=FORollout(val),
                                # estimate_value=val,
-                               check_repeat_obs=false,
-                               # node_sr_belief_updater=AggressivenessPOWFilter(wup)
-                              )
-)
+                               check_repeat_obs=false,))
+#                                # node_sr_belief_updater=AggressivenessPOWFilter(wup)
+#                               )
+# )
 
 
 function make_updater(cor, problem, rng_seed)

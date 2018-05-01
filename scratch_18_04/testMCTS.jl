@@ -29,25 +29,36 @@ using D3Trees
 
 DEBUG = true
 
-@show N = 1000
-@show n_iters = 1000
+# @show N = 1000
+@show n_iters = 1000 #10000   #C 1000
 @show max_time = Inf
-@show max_depth = 40
+@show max_depth = 20 #60   #C 20
+@show c_uct = 5.0 #1.0   #C 5.0
+@show k_state = 4.0 #0.2, #C 4.0,
+@show alpha_state = 1/8.0 #0.0, #C 1/8.0,
 @show val = SimpleSolver()
 alldata = DataFrame()
 
 dpws = DPWSolver(depth=max_depth,
                  n_iterations=n_iters,
                  max_time=max_time,
-                 exploration_constant=8.0,
-                 k_state=4.5,
-                 alpha_state=1/10.0,
+                 exploration_constant=c_uct,
+                 k_state=k_state,
+                 alpha_state=alpha_state,
                  enable_action_pw=false,
                  check_repeat_state=false,
                  estimate_value=RolloutEstimator(val),
                  # estimate_value=val
                  tree_in_info = DEBUG
                 )
+
+# mcts_solver = MCTSSolver(n_iterations=n_iters,
+#                          depth=max_depth,
+#                          exploration_constant=5.0,
+#                          estimate_value=RolloutEstimator(val),
+#                          enable_tree_vis = DEBUG
+#                         )
+
 dpws_x10 = deepcopy(dpws)
 dpws_x10.n_iterations *= 10
 
@@ -82,8 +93,9 @@ pp = PhysicalParam(4, lane_length=100.0)
 dmodel = NoCrashIDMMOBILModel(10, pp,
                               behaviors=behaviors,
                               p_appear=1.0,
-                              lane_terminate=false,
-                              max_dist=1000.0
+                              lane_terminate=true,
+                              max_dist=2000.0 #1000.0,
+                              # vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
                              )
 rmodel = SuccessReward(lambda=lambda)
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
@@ -93,6 +105,8 @@ problems = Dict{String,Any}("omniscient"=>mdp, "mlmpc"=>pomdp)
 
 method = "omniscient"
 # method = "mlmpc"
+# solver = mcts_solver
+# problem = mdp
 solver = solvers[method]
 problem = problems[method]
 sim_problem = deepcopy(problem)
@@ -129,19 +143,28 @@ end
 
 
 #Visualization
-t = 22.5
+#Set time t used for showing tree. Use video to find interesting situations.
+t = 11.25
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"/home/cj/2018/Multilane/Figs/state_at_t.png")
 print(hist.action_hist[step])
 inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
-
+#Produce video
 frames = Frames(MIME("image/png"), fps=1/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
-    push!(frames, visualize(mdp, s, r))
+    push!(frames, visualize(problem, s, r))
 end
 gifname = "./Figs/testMCTS.ogv"
 write(gifname, frames)
+
+
+# For visualizing rollouts, not used for now. See make_video for more details
+# tree = get(hist.ainfo_hist[1], :tree, nothing)
+# rollouts = make_rollouts(planner, tree)
+# nwr = NodeWithRollouts(POWTreeObsNode(tree, 1), rollouts)
+# push!(frames, visualize(pomdp, is, r, tree=nwr))
 
 
 #----------

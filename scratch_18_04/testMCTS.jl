@@ -95,7 +95,7 @@ dmodel = NoCrashIDMMOBILModel(10, pp,
                               p_appear=1.0,
                               lane_terminate=true,
                               max_dist=2000.0 #1000.0,
-                              # vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
+                              vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
                              )
 rmodel = SuccessReward(lambda=lambda)
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
@@ -144,7 +144,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 11.25
+t = 8.25
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"/home/cj/2018/Multilane/Figs/state_at_t.png")
 print(hist.action_hist[step])

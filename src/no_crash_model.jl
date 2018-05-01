@@ -252,7 +252,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         pp = mdp.dmodel.phys_param
         dt = pp.dt
         nb_cars = length(s.cars)
-        resize!(sp.cars, nb_cars)
+        resize!(sp.cars, nb_cars)   #Set actual number of cars
         sp.terminal = s.terminal
         sp.t = s.t + dt
 
@@ -273,9 +273,9 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         for i in 2:nb_cars
             neighborhood = get_neighborhood(pp, s, i)
 
-            behavior = s.cars[i].behavior
+            behavior = s.cars[i].behavior   #CCC, Here noise could be added directly to the behavior instead of adding noise to the accelerations.
 
-            acc = gen_accel(behavior, mdp.dmodel, s, neighborhood, i, rng)
+            acc = gen_accel(behavior, mdp.dmodel, s, neighborhood, i, rng)   #Noise is added to the acceleration here
             dvs[i] = dt*acc
             dxs[i] = (s.cars[i].vel + dvs[i]/2.)*dt
 
@@ -357,7 +357,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
 
                     # check if they overlap longitudinally
                     if car_j.x + dxs[j] > car_i.x + dxs[i] - pp.l_car
-                    
+
                         # check if they will be in the same lane
                         if occupation_overlap(car_i.y + dys[i], car_j.y + dys[j])
                             # warn and nudge behind
@@ -514,7 +514,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             end
 
             margin, lane = findmax(sstar_margins)
-            
+
             if margin > 0.0
                 if vel > sp.cars[1].vel
                     # at back
@@ -565,7 +565,7 @@ Return the number of braking actions that occured during this state transition
 """
 function detect_braking(mdp::NoCrashProblem, s::MLState, sp::MLState, threshold::Float64)
     nb_brakes = 0
-    nb_leaving = 0 
+    nb_leaving = 0
     dt = mdp.dmodel.phys_param.dt
     for (i,c) in enumerate(s.cars)
         if length(sp.cars) >= i-nb_leaving
@@ -594,7 +594,7 @@ Return the ids of cars that brake during this state transition
 """
 function braking_ids(mdp::NoCrashProblem, s::MLState, sp::MLState, threshold=mdp.rmodel.brake_penalty_thresh)
     braking = Int[]
-    nb_leaving = 0 
+    nb_leaving = 0
     dt = mdp.dmodel.phys_param.dt
     for (i,c) in enumerate(s.cars)
         if length(sp.cars) >= i-nb_leaving
@@ -620,7 +620,7 @@ end
 Return the maximum braking (a positive number) by any car during the transition between s an sp
 """
 function max_braking(mdp::NoCrashProblem, s::MLState, sp::MLState)
-    nb_leaving = 0 
+    nb_leaving = 0
     dt = mdp.dmodel.phys_param.dt
     min_acc = 0.0
     for (i,c) in enumerate(s.cars)

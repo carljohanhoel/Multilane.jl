@@ -45,3 +45,60 @@ function reward(p::NoCrashProblem{SuccessReward}, s::MLState, ::MLAction, sp::ML
     end
     return r
 end
+
+
+"""
+Simple speed reward
+"""
+@with_kw struct SpeedReward <: AbstractMLRewardModel
+    v_des::Float64                  = 33.3 # always positive
+    lane_change_cost::Float64       = 0.0 # always positive
+    brake_penalty_thresh::Float64   = 4.0  # always positive (also used when calculating actions space of node)
+    target_lane::Int                = typemax(Int) #Not used here. But needed for condition that terminates simulation when target lane is reached (if using a target lane).
+end
+
+# function reward(p::NoCrashProblem{SpeedReward}, s::MLState, ::MLAction, sp::MLState)
+#
+#     v_ego = sp.cars[1].vel
+#     r = 1/(1 + ((v_ego-p.rmodel.v_des)/p.rmodel.v_des)^2)
+#
+#     if !isinteger(sp.cars[1].y)
+#         r -= p.rmodel.lane_change_cost
+#     end
+#
+#     return r
+# end
+
+function reward(mdp::MLMDP{MLState, MLAction, D, SpeedReward},
+          s::MLState,
+          ::MLAction,
+          sp::MLState) where D<:AbstractMLDynamicsModel
+
+    v_ego = sp.cars[1].vel
+    # r = 1/(1 + ((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)^2)
+    r = 1 - abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+
+    if !isinteger(sp.cars[1].y)
+        r -= mdp.rmodel.lane_change_cost
+    end
+    # r += sp.cars[1].y == 4 ? 1 : 0 #Just for testing
+
+    return r
+end
+
+function reward(mdp::MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward},
+          s::MLState,
+          ::MLAction,
+          sp::MLState) where D<:AbstractMLDynamicsModel
+
+    v_ego = sp.cars[1].vel
+    # r = 1/(1 + ((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)^2)
+    r = 1 - abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+
+    if !isinteger(sp.cars[1].y)
+        r -= mdp.rmodel.lane_change_cost
+    end
+    # r += sp.cars[1].y == 4 ? 1 : 0 #Just for testing
+
+    return r
+end

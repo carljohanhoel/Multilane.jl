@@ -45,7 +45,7 @@ function accel_dist(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsModel, s
 	dt = pp.dt
 	car = s.cars[idx]
 	vel = car.vel
-    
+
 	dv, ds = get_dv_ds(pp,s,neighborhood,idx,2)
 
 	dvel = get_idm_dv(bmodel.p_idm,dt,vel,dv,ds) #call idm model
@@ -84,7 +84,16 @@ function max_accel(bmodel::IDMMOBILBehavior)
     return 1.5*bmodel.p_idm.a
 end
 
-function gen_lane_change(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsModel, s::MLState, neighborhood::Array{Int,1}, idx::Int, rng::AbstractRNG)
+function gen_accel(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsModel, s::MLState, neighborhood::Array{Int,1}, idx::Int)
+
+    d = accel_dist(bmodel, dmodel, s, neighborhood, idx)
+    acc = d.c #No noise, takes mean value
+
+    return max(acc, -dmodel.phys_param.brake_limit)
+end
+
+
+function gen_lane_change(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsModel, s::MLState, neighborhood::Array{Int,1}, idx::Int)
 
 	pp = dmodel.phys_param
 	dt = pp.dt
@@ -98,7 +107,7 @@ function gen_lane_change(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsMod
 	end
 
 	#sample normally
-	lanechange_::Int = get_mobil_lane_change(bmodel, pp, s, neighborhood, idx, rng)
+	lanechange_::Int = get_mobil_lane_change(bmodel, pp, s, neighborhood, idx)
 	#gives +1, -1 or 0
 
     lanechange = lanechange_

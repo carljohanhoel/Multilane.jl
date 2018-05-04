@@ -101,13 +101,22 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
         if ego_y == 1. && a.lane_change < 0. || ego_y == mdp.dmodel.phys_param.nb_lanes && a.lane_change > 0.0
             continue
         end
+        # C, Prune action stay in lane when in between two lanes. Either must finish the lane change or must abort it and go back to previous lane.
+        if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0 && a.lane_change == 0
+            continue
+        end
         # prevent running into the person in front or to the side
         if is_safe(mdp, s, as.NORMAL_ACTIONS[i])
             push!(acceptable, i)
         end
     end
     brake_acc = calc_brake_acc(mdp, s)
-    brake = MLAction(brake_acc, 0)
+    # brake = MLAction(brake_acc, 0)
+    if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0
+        brake = MLAction(brake_acc, s.cars[1].lane_change) #Forces lane change to finish. This is because otherwise there are problems with the IDM/MOBIL rollout, since it can decide to stay inbetween two lanes
+    else
+        brake = MLAction(brake_acc, 0)
+    end
     return NoCrashActionSpace(as.NORMAL_ACTIONS, acceptable, brake)
 end
 
@@ -279,7 +288,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             dvs[i] = dt*acc
             dxs[i] = (s.cars[i].vel + dvs[i]/2.)*dt
 
-            lcs[i] = gen_lane_change(behavior, mdp.dmodel, s, neighborhood, i, rng)
+            lcs[i] = gen_lane_change(behavior, mdp.dmodel, s, neighborhood, i)
             dys[i] = lcs[i] * dt
         end
 
@@ -436,7 +445,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             # end
             @assert yp >= 1.0 && yp <= pp.nb_lanes
 
-            if xp < 0.0 || xp >= pp.lane_length
+            if xp < 0.0 || xp >= pp.lane_length #Limits maximum distance from ego vehicle before a vehicle is deleted
                 push!(exits, i)
             else
                 sp.cars[i] = CarState(xp, yp, velp, lcs[i], car.behavior, s.cars[i].id)

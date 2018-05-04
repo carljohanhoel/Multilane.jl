@@ -29,29 +29,29 @@ function action(p::Simple,s::Union{MLState,MLObs})
     dmodel = p.mdp.dmodel
     lc = sign(y_desired-s.cars[1].y) * dmodel.lane_change_rate
     acc = dmodel.adjustment_acceleration
-  
+
     #if can't move towards desired lane sweep through accelerating and decelerating
-  
+
     if is_safe(p.mdp, s, MLAction(0.,lc))
         return MLAction(0.,lc)
     end
-  
+
     # maintain distance
     nbhd = get_neighborhood(dmodel.phys_param,s,1)
-  
+
     if nbhd[2] == 0 && nbhd[5] == 0
         return MLAction(0.,0.)
     end
-  
+
     dist_ahead = nbhd[2] != 0 ? s.cars[nbhd[2]].x - s.cars[1].x : Inf
     dist_behind = nbhd[5] != 0 ? s.cars[nbhd[5]].x - s.cars[1].x : Inf
-  
+
     sgn = abs(dist_ahead) <= abs(dist_behind) ? -1 : 1
-  
+
     accel = sgn * acc
-  
+
     max_accel = max_safe_acc(p.mdp, s, 0.0)
-  
+
     return MLAction(min(accel, max_accel),0.)
 end
 action(p::Simple, b::BehaviorBelief) = action(p, b.physical)
@@ -82,12 +82,36 @@ function action(p::BehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0))
     if p.keep_lane
         lc = 0.0
     else
-        lc = gen_lane_change(p.b, p.problem.dmodel, s, nbhd, 1, p.rng)
+        lc = gen_lane_change(p.b, p.problem.dmodel, s, nbhd, 1)
     end
     return MLAction(acc, lc)
 end
 action(p::BehaviorPolicy, b::AggressivenessBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
 action(p::BehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
+
+mutable struct DeterministicBehaviorSolver <: Solver
+    b::BehaviorModel
+    keep_lane::Bool
+end
+mutable struct DeterministicBehaviorPolicy <: Policy
+    problem::NoCrashProblem
+    b::BehaviorModel
+    keep_lane::Bool
+end
+solve(s::DeterministicBehaviorSolver, p::NoCrashProblem) = DeterministicBehaviorPolicy(p, s.b, s.keep_lane, s.rng)
+
+function action(p::DeterministicBehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0))
+    nbhd = get_neighborhood(p.problem.dmodel.phys_param, s, 1)
+    acc = gen_accel(p.b, p.problem.dmodel, s, nbhd, 1) #No rng
+    if p.keep_lane
+        lc = 0.0
+    else
+        lc = gen_lane_change(p.b, p.problem.dmodel, s, nbhd, 1)
+    end
+    return MLAction(acc, lc)
+end
+action(p::DeterministicBehaviorPolicy, b::AggressivenessBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
+action(p::DeterministicBehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
 
 mutable struct IDMLaneSeekingSolver <: Solver
     b::BehaviorModel

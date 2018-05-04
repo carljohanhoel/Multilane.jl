@@ -91,6 +91,7 @@ export
     NoCrashMDP,
     NoCrashPOMDP,
     SuccessReward,
+    SpeedReward,
     Simple,
     SimpleSolver,
     BehaviorSolver,

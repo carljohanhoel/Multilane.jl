@@ -61,14 +61,14 @@ function visualize(p, s, r; tree=nothing)
         push!(stuff, ac)
     end
 
-    render(stuff, cam=CarFollowCamera(1, 8.5))
+    render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
 end
 
 # start with just lines
 
 struct RelativeRender{T} <: Renderable
     object::T
-    t::Float64     # time that this is being rendered 
+    t::Float64     # time that this is being rendered
     vel::Float64
 end
 
@@ -136,7 +136,7 @@ end
 function render_rel_ego_line!(rm::RenderModel, pp, s, sp, t, vel)
     c = first(s.cars)
     cp = first(sp.cars)
-    x1 = s.x + c.x - (s.t-t)*vel 
+    x1 = s.x + c.x - (s.t-t)*vel
     y1 = (c.y - 1.0)*pp.w_lane
     x2 = sp.x + cp.x - (sp.t-t)*vel
     y2 = (cp.y - 1.0)*pp.w_lane
@@ -159,7 +159,7 @@ function render_rel_lines!(rm::RenderModel, pp, s, sp, t, vel)
         else # c and cp have same id
             # for x, if the point is in the future, you want it to be way behind where it should be
             # if the point is in the past, you want it to be way ahead
-            x1 = s.x + c.x - (s.t-t)*vel 
+            x1 = s.x + c.x - (s.t-t)*vel
             y1 = (c.y - 1.0)*pp.w_lane
             x2 = sp.x + cp.x - (sp.t-t)*vel
             y2 = (cp.y - 1.0)*pp.w_lane
@@ -260,7 +260,7 @@ function visualize(mdp::Union{MLMDP,MLPOMDP}, s::MLState, a::MLAction, sp::MLSta
 
     scene = Scene()
     for cs in s.cars
-        push!(scene, Vehicle(VehicleState(VecSE2(cs.x, (cs.y-1.0)*pp.w_lane, 0.0), roadway, cs.vel), 
+        push!(scene, Vehicle(VehicleState(VecSE2(cs.x, (cs.y-1.0)*pp.w_lane, 0.0), roadway, cs.vel),
                                 VehicleDef(cs.id, AgentClass.CAR, pp.l_car, pp.w_car)))
     end
     render(scene, roadway, [hbol, iol, cidol, cvol], cam=FitToContentCamera())
@@ -274,7 +274,7 @@ function visualize(pp::PhysicalParam, s::MLState)
                                    lane_width=pp.w_lane)
     scene = Scene()
     for cs in s.cars
-        push!(scene, Vehicle(VehicleState(VecSE2(cs.x, (cs.y-1.0)*pp.w_lane, 0.0), roadway, cs.vel), 
+        push!(scene, Vehicle(VehicleState(VecSE2(cs.x, (cs.y-1.0)*pp.w_lane, 0.0), roadway, cs.vel),
                                 VehicleDef(cs.id, AgentClass.CAR, pp.l_car, pp.w_car)))
     end
     render(scene, roadway, [CarIDOverlay(), CarVelOverlay()], cam=FitToContentCamera())

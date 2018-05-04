@@ -1,3 +1,5 @@
+# ZZZ Removed precompilation of Multilane, not sure what that means
+
 include("../src/Multilane.jl")
 using Multilane
 using MCTS
@@ -27,17 +29,51 @@ using D3Trees
 @everywhere using Multilane
 @everywhere using POMDPToolbox
 
+
+##
 DEBUG = true
 
 # @show N = 1000
 @show n_iters = 1000 #10000   #C 1000
 @show max_time = Inf
 @show max_depth = 20 #60   #C 20
-@show c_uct = 5.0 #1.0   #C 5.0
+@show c_uct = 1.0   #C 5.0
 @show k_state = 4.0 #0.2, #C 4.0,
 @show alpha_state = 1/8.0 #0.0, #C 1/8.0,
 @show val = SimpleSolver()
 alldata = DataFrame()
+
+
+## Problem definition
+
+cor = 0.75
+lambda = 1.0
+v_des = 35.0
+
+@show cor
+@show lambda
+
+behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
+pp = PhysicalParam(4, lane_length=100.0)
+dmodel = NoCrashIDMMOBILModel(10, pp,   #First argument is number of cars
+                              behaviors=behaviors,
+                              p_appear=1.0,
+                              lane_terminate=true,
+                              max_dist=2000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (?)
+                              vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
+                             )
+# rmodel = SuccessReward(lambda=lambda)
+rmodel = SpeedReward(v_des = v_des)
+mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
+pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
+
+problem = pomdp    #Choose which problem to work with
+
+## Solver definition
+rollout_problem = deepcopy(pomdp)
+rollout_problem.dmodel.max_dist = Inf
+rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
 
 dpws = DPWSolver(depth=max_depth,
                  n_iterations=n_iters,
@@ -47,20 +83,10 @@ dpws = DPWSolver(depth=max_depth,
                  alpha_state=alpha_state,
                  enable_action_pw=false,
                  check_repeat_state=false,
-                 estimate_value=RolloutEstimator(val),
+                 estimate_value=RolloutEstimator(rollout_policy),
                  # estimate_value=val
                  tree_in_info = DEBUG
                 )
-
-# mcts_solver = MCTSSolver(n_iterations=n_iters,
-#                          depth=max_depth,
-#                          exploration_constant=5.0,
-#                          estimate_value=RolloutEstimator(val),
-#                          enable_tree_vis = DEBUG
-#                         )
-
-dpws_x10 = deepcopy(dpws)
-dpws_x10.n_iterations *= 10
 
 solvers = Dict{String, Solver}(
     "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
@@ -82,43 +108,27 @@ end
 pow_updater(up::AggressivenessUpdater) = AggressivenessPOWFilter(up.params)
 pow_updater(up::BehaviorParticleUpdater) = BehaviorPOWFilter(up.params)
 
-cor = 0.75
-lambda = 1.0
 
-@show cor
-@show lambda
+## Choice of solver
 
-behaviors = standard_uniform(correlation=cor)
-pp = PhysicalParam(4, lane_length=100.0)
-dmodel = NoCrashIDMMOBILModel(10, pp,
-                              behaviors=behaviors,
-                              p_appear=1.0,
-                              lane_terminate=true,
-                              max_dist=2000.0 #1000.0,
-                              vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
-                             )
-rmodel = SuccessReward(lambda=lambda)
-mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
-pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
-
-problems = Dict{String,Any}("omniscient"=>mdp, "mlmpc"=>pomdp)
-
-method = "omniscient"
-# method = "mlmpc"
-# solver = mcts_solver
-# problem = mdp
+# method = "omniscient"
+method = "mlmpc"
 solver = solvers[method]
-problem = problems[method]
+
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
 
+
+## Run simulations
 
 # for i in 1:N
 i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
-initial_state = initial_state(sim_problem, rng)
-ips = MLPhysicalState(initial_state)
+is = initial_state(sim_problem, rng)   #Init random state by simulating 200 steps with standard IDM model
+#ZZZ Line below is temp, just to start with simple initial state
+# is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
+ips = MLPhysicalState(is)
 
 metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :lambda=>lambda,
@@ -128,23 +138,24 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
            )
 hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false)
 
+##
 
 if sim_problem isa POMDP
     updater = make_updater(cor, sim_problem, rng_seed)
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, updater, ips, initial_state)
+    hist = simulate(hr, sim_problem, planner, updater, ips, is)
     # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
 else
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, initial_state)
+    hist = simulate(hr, sim_problem, planner, is)
 end
 
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 8.25
+t = 30.00
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"/home/cj/2018/Multilane/Figs/state_at_t.png")
 print(hist.action_hist[step])

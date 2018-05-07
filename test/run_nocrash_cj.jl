@@ -23,8 +23,8 @@ using Images
 
 ##
 #Set up problem configuration
-nb_lanes = 4
-pp = PhysicalParam(nb_lanes,lane_length=400.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
+nb_lanes = 3
+pp = PhysicalParam(nb_lanes,lane_length=300.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
 _discount = 1.
 nb_cars=20
 
@@ -33,9 +33,9 @@ behaviors = standard_uniform(correlation=0.75)   #Sets max/min values of IDM and
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp, behaviors=behaviors)   #Sets up simulation model parameters.
 dmodel.max_dist = 100000   #Make svisualization fail if max_dist is set to the default Inf
 mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);   #Sets the mdp, which inherits from POMDPs.jl
-rng = MersenneTwister(6)
+rng = MersenneTwister(14)
 
-initSteps = 150
+initSteps = 1000
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
 # @show s.cars[1]
 #visualize(mdp,s,MLAction(0,0))
@@ -45,8 +45,10 @@ v_des = 25.0
 behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
 policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
 
-sim = HistoryRecorder(rng=rng, max_steps=500, show_progress=true) # initialize a random number generator
+sim = HistoryRecorder(rng=rng, max_steps=1000, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
+
+println("sim done")
 
 frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
@@ -54,6 +56,10 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 end
 gifname = "./Figs/testViz.ogv"
 write(gifname, frames)
+
+
+error()
+
 
 # check for crashes
 for i in 1:length(state_hist(hist))-1

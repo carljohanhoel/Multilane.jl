@@ -54,11 +54,11 @@ if scenario == "continuous_driving"
     cor = 0.75
     lambda = 1.0
 
-    nb_lanes = 4
-    lane_length = 400.
+    nb_lanes = 3
+    lane_length = 300.
     nb_cars = 20
 
-    initSteps = 150
+    initSteps = 1000
 
     v_des = 25.0
 
@@ -155,6 +155,7 @@ i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
+write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0.png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
 ips = MLPhysicalState(is)
@@ -165,7 +166,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false)
+hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -186,13 +187,13 @@ end
 #Set time t used for showing tree. Use video to find interesting situations.
 t = 6.00
 step = convert(Int, t / pp.dt) + 1
-write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"/home/cj/2018/Multilane/Figs/state_at_t.png")
+write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 print(hist.action_hist[step])
 inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
 # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 #Produce video
-frames = Frames(MIME("image/png"), fps=1/pp.dt)
+frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end

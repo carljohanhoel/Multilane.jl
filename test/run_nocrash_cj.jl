@@ -1,7 +1,7 @@
 #Runs simulation with MDP and POMDP settings, but uses no MCTS to control the ego vehicle.
 
 push!(LOAD_PATH,joinpath("./src"))
-# include("../src/Multilane.jl")
+include("../src/Multilane.jl")
 
 using Revise #To allow recompiling of modules withhout restarting julia
 

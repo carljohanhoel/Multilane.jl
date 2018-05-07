@@ -27,7 +27,7 @@ end
 
 actions(p::MLPOMDP, b::AggressivenessPOWNodeBelief) = actions(p, b.b.physical)
 
-function actions(p::MLPOMDP, h::POWTreeObsNode) 
+function actions(p::MLPOMDP, h::POMCPOW.POWTreeObsNode) 
     if isroot(h)
         return actions(p, belief(h))
     else

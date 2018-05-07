@@ -72,7 +72,7 @@ struct RelativeRender{T} <: Renderable
     vel::Float64
 end
 
-struct NodeWithRollouts{N<:POWTreeObsNode}
+struct NodeWithRollouts{N<:POMCPOW.POWTreeObsNode}
     node::N
     rollouts::Vector
 end

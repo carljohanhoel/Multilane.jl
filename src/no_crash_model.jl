@@ -667,10 +667,10 @@ function initial_state(mdp::NoCrashProblem, ps::MLPhysicalState, rng::AbstractRN
     return s
 end
 
-function initial_state(p::NoCrashProblem, rng::AbstractRNG=Base.GLOBAL_RNG)
+function initial_state(p::NoCrashProblem, rng::AbstractRNG=Base.GLOBAL_RNG; initSteps::Int = 200)
     @if_debug println("debugging")
     mdp = NoCrashMDP{typeof(p.rmodel), typeof(p.dmodel.behaviors)}(p.dmodel, p.rmodel, p.discount, p.throw) # make sure an MDP
-    return relaxed_initial_state(mdp, 200, rng)
+    return relaxed_initial_state(mdp, initSteps, rng)
 end
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)

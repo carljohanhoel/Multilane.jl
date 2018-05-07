@@ -53,7 +53,7 @@ function standard_uniform(factor=1.0; correlation::Union{Bool,Float64}=false)
     ma = 1.4;    da = 0.6
     mb = 2.0;    db = 1.0
     mT = 1.5;    dT = 0.5
-    mv0 = 33.3;  dv0 = 5.63
+    mv0 = 25.0;  dv0 = 5.56
     ms0 = 2.0;   ds0 = 2.0
     del = 4.0
     mp = 0.5;    dp = 0.5

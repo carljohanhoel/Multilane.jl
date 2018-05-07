@@ -33,6 +33,7 @@ using D3Trees
 ##
 DEBUG = true
 
+#Solver parameters
 # @show N = 1000
 @show n_iters = 1000 #10000   #C 1000
 @show max_time = Inf
@@ -40,40 +41,68 @@ DEBUG = true
 @show c_uct = 1.0   #C 5.0
 @show k_state = 4.0 #0.2, #C 4.0,
 @show alpha_state = 1/8.0 #0.0, #C 1/8.0,
-@show val = SimpleSolver()
+# @show val = SimpleSolver()
 alldata = DataFrame()
 
 
-## Problem definition
+scenario = "continuous_driving"
+# problem = "forced_lane_changes"
 
-cor = 0.75
-lambda = 1.0
-v_des = 35.0
+
+## Problem definition
+if scenario == "continuous_driving"
+    cor = 0.75
+    lambda = 1.0
+
+    nb_lanes = 4
+    lane_length = 400.
+    nb_cars = 20
+
+    initSteps = 150
+
+    v_des = 25.0
+
+    rmodel = SpeedReward(v_des = v_des)
+elseif scenario == "forced_lane_changes"
+    cor = 0.75
+    lambda = 1.0
+
+    nb_lanes = 4
+    lane_length = 100.
+    nb_cars = 10
+
+    initSteps = 200
+
+    v_des = 35.0
+    rmodel = SuccessReward(lambda=lambda)
+end
 
 @show cor
 @show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
-pp = PhysicalParam(4, lane_length=100.0)
-dmodel = NoCrashIDMMOBILModel(10, pp,   #First argument is number of cars
+pp = PhysicalParam(nb_lanes, lane_length=lane_length)
+dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
                               lane_terminate=true,
-                              max_dist=2000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (?)
+                              max_dist=10000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (?)
                               vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
                              )
-# rmodel = SuccessReward(lambda=lambda)
-rmodel = SpeedReward(v_des = v_des)
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 
 problem = pomdp    #Choose which problem to work with
 
 ## Solver definition
-rollout_problem = deepcopy(pomdp)
-rollout_problem.dmodel.max_dist = Inf
-rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
-rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
+if scenario == "continuous_driving"
+    rollout_problem = deepcopy(pomdp)
+    rollout_problem.dmodel.max_dist = Inf
+    rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+    rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
+elseif scenario == "forced_lane_changes"
+    rollout_policy = SimpleSolver()
+end
 
 dpws = DPWSolver(depth=max_depth,
                  n_iterations=n_iters,
@@ -125,7 +154,7 @@ sim_problem.throw=true
 i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
-is = initial_state(sim_problem, rng)   #Init random state by simulating 200 steps with standard IDM model
+is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
 ips = MLPhysicalState(is)
@@ -155,7 +184,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 30.00
+t = 6.00
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"/home/cj/2018/Multilane/Figs/state_at_t.png")
 print(hist.action_hist[step])

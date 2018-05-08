@@ -1,6 +1,10 @@
 # ZZZ Removed precompilation of Multilane, not sure what that means
 
-include("../src/Multilane.jl")
+push!(LOAD_PATH,joinpath("./src"))
+# include("../src/Multilane.jl")   #ZZZ This may be needed...
+
+using Revise #To allow recompiling of modules withhout restarting julia
+
 using Multilane
 using MCTS
 using POMDPToolbox
@@ -87,10 +91,11 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               p_appear=1.0,
                               lane_terminate=true,
                               max_dist=10000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (?)
-                              vel_sigma = 0.5   #0.0   #Standard deviation of speed of inserted cars
+                              vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
+                              semantic_actions = true
                              )
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
-pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
+pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
 problem = pomdp    #Choose which problem to work with
 

@@ -30,6 +30,8 @@ mutable struct NoCrashIDMMOBILModel{G<:BehaviorGenerator} <: AbstractMLDynamicsM
     brake_terminate_thresh::Float64 # terminate simulation if braking is above this (always positive)
     max_dist::Float64 # terminate simulation if distance becomes greater than this
     speed_terminate_thresh::Float64 # terminate simulation if any speed is below this
+
+    semantic_actions::Bool # if true, use semantic actions for longitudinal movement
 end
 
 function NoCrashIDMMOBILModel(nb_cars::Int,
@@ -43,7 +45,8 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
                               behaviors=DiscreteBehaviorSet(IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in
                                                  enumerate(Iterators.product(["cautious","normal","aggressive"],
                                                         [pp.v_slow+0.5;pp.v_med;pp.v_fast],
-                                                        [pp.l_car]))], Weights(ones(9)))
+                                                        [pp.l_car]))], Weights(ones(9))),
+                               semantic_actions = true
                               )
 
     return NoCrashIDMMOBILModel(
@@ -58,7 +61,8 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
         lane_terminate,
         brake_terminate_thresh,
         max_dist,
-        speed_terminate_thresh
+        speed_terminate_thresh,
+        semantic_actions
     )
 end
 
@@ -81,8 +85,14 @@ struct NoCrashActionSpace
     acceptable::IntSet
     brake::MLAction # this action will be EITHER braking at half the dangerous brake threshold OR the braking necessary to prevent a collision at all time in the future
 end
+struct NoCrashSemanticActionSpace
+    actions::Vector{MLAction} # all the actions except brake
+    acceptable::IntSet
+end
 
 const NB_NORMAL_ACTIONS = 9
+
+const NB_SEMANTIC_ACTIONS = 5
 
 function NoCrashActionSpace(mdp::NoCrashProblem)
     accels = (-mdp.dmodel.adjustment_acceleration, 0.0, mdp.dmodel.adjustment_acceleration)
@@ -90,34 +100,65 @@ function NoCrashActionSpace(mdp::NoCrashProblem)
     NORMAL_ACTIONS = MLAction[MLAction(a,l) for (a,l) in Iterators.product(accels, lane_changes)] # this should be in the problem
     return NoCrashActionSpace(NORMAL_ACTIONS, IntSet(), MLAction()) # note: brake will be calculated later based on the state
 end
+function NoCrashSemanticActionSpace(mdp::NoCrashProblem)
+    actions = [MLAction(-1.0,0.0),MLAction(0.0,0.0),MLAction(+1.0,0.0),MLAction(0.0,-1.0),MLAction(0.0,+1.0)]
+    return NoCrashSemanticActionSpace(actions, IntSet())
+end
 
 function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
-    as = NoCrashActionSpace(mdp)
     acceptable = IntSet()
-    for i in 1:NB_NORMAL_ACTIONS
-        a = as.NORMAL_ACTIONS[i]
-        ego_y = s.cars[1].y
-        # prevent going off the road
-        if ego_y == 1. && a.lane_change < 0. || ego_y == mdp.dmodel.phys_param.nb_lanes && a.lane_change > 0.0
-            continue
+    if mdp.dmodel.semantic_actions
+        as = NoCrashSemanticActionSpace(mdp)
+        for i in 1:NB_SEMANTIC_ACTIONS
+            a = as.actions[i]
+            ego_y = s.cars[1].y
+            # prevent going off the road
+            if ego_y == 1. && a.lane_change < 0. || ego_y == mdp.dmodel.phys_param.nb_lanes && a.lane_change > 0.0
+                continue
+            end
+            # C, Prune action stay in lane when in between two lanes. Either must finish the lane change or must abort it and go back to previous lane.
+            if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0 && a.lane_change == 0
+                continue
+            end
+            if s.cars[1].behavior.p_idm[4] <= 17 && a.acc == -1 #ZZZ parameterize!!!
+                continue
+            end
+            if s.cars[1].behavior.p_idm[4] >= 23 && a.acc == 1
+                continue
+            end
+            # prevent running into the person in front or to the side
+            if is_safe(mdp, s, as.actions[i]) || a.lane_change == 0.0 #Now only checks if safe when changing lanes
+                push!(acceptable, i)
+            end
         end
-        # C, Prune action stay in lane when in between two lanes. Either must finish the lane change or must abort it and go back to previous lane.
-        if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0 && a.lane_change == 0
-            continue
-        end
-        # prevent running into the person in front or to the side
-        if is_safe(mdp, s, as.NORMAL_ACTIONS[i])
-            push!(acceptable, i)
-        end
-    end
-    brake_acc = calc_brake_acc(mdp, s)
-    # brake = MLAction(brake_acc, 0)
-    if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0
-        brake = MLAction(brake_acc, s.cars[1].lane_change) #Forces lane change to finish. This is because otherwise there are problems with the IDM/MOBIL rollout, since it can decide to stay inbetween two lanes
+        return NoCrashSemanticActionSpace(as.actions,acceptable)
     else
-        brake = MLAction(brake_acc, 0)
+        as = NoCrashActionSpace(mdp)
+        for i in 1:NB_NORMAL_ACTIONS
+            a = as.NORMAL_ACTIONS[i]
+            ego_y = s.cars[1].y
+            # prevent going off the road
+            if ego_y == 1. && a.lane_change < 0. || ego_y == mdp.dmodel.phys_param.nb_lanes && a.lane_change > 0.0
+                continue
+            end
+            # C, Prune action stay in lane when in between two lanes. Either must finish the lane change or must abort it and go back to previous lane.
+            if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0 && a.lane_change == 0
+                continue
+            end
+            # prevent running into the person in front or to the side
+            if is_safe(mdp, s, as.NORMAL_ACTIONS[i])
+                push!(acceptable, i)
+            end
+        end
+        brake_acc = calc_brake_acc(mdp, s)
+        # brake = MLAction(brake_acc, 0)
+        if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0
+            brake = MLAction(brake_acc, s.cars[1].lane_change) #Forces lane change to finish. This is because otherwise there are problems with the IDM/MOBIL rollout, since it can decide to stay inbetween two lanes
+        else
+            brake = MLAction(brake_acc, 0)
+        end
+        return NoCrashActionSpace(as.NORMAL_ACTIONS, acceptable, brake)
     end
-    return NoCrashActionSpace(as.NORMAL_ACTIONS, acceptable, brake)
 end
 
 calc_brake_acc(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState}) = min(max_safe_acc(mdp,s), -mdp.rmodel.brake_penalty_thresh/2.0)
@@ -134,11 +175,31 @@ function Base.next(as::NoCrashActionSpace, state::Integer)
     end
     return (as.NORMAL_ACTIONS[state], state+1)
 end
-Base.done(as::NoCrashActionSpace, state::Integer) = state > NB_NORMAL_ACTIONS+1
+Base.done(as::NoCrashActionSpace, state::Integer) = state > NB_SEMANTIC_ACTIONS+1
 Base.length(as::NoCrashActionSpace) = length(as.acceptable) + 1
+
+iterator(as::NoCrashSemanticActionSpace) = as
+Base.start(as::NoCrashSemanticActionSpace) = 1
+function Base.next(as::NoCrashSemanticActionSpace, state::Integer)
+    while !(state in as.acceptable)
+        state += 1
+    end
+    return (as.actions[state], state+1)
+end
+Base.done(as::NoCrashSemanticActionSpace, state::Integer) = state > collect(as.acceptable)[end]
+Base.length(as::NoCrashSemanticActionSpace) = length(as.acceptable)
 
 function rand(rng::AbstractRNG, as::NoCrashActionSpace, a::MLAction=MLAction())
     nb_acts = length(as.acceptable)+1
+    index = rand(rng,1:nb_acts)
+    for (i,a) in enumerate(as) # is this efficient at all ?
+        if i == index
+            return a
+        end
+    end
+end
+function rand(rng::AbstractRNG, as::NoCrashSemanticActionSpace, a::MLAction=MLAction())
+    nb_acts = length(as.acceptable)
     index = rand(rng,1:nb_acts)
     for (i,a) in enumerate(as) # is this efficient at all ?
         if i == index
@@ -273,11 +334,33 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         dys = Vector{Float64}(nb_cars)
         lcs = Vector{Float64}(nb_cars)
 
-        # agent
-        dvs[1] = a.acc*dt
-        dxs[1] = s.cars[1].vel*dt + a.acc*dt^2/2.
-        lcs[1] = a.lane_change
-        dys[1] = a.lane_change*dt
+
+
+        if mdp.dmodel.semantic_actions
+            # Change ego behavior
+            ego_car = s.cars[1]
+            old_idm = ego_car.behavior.p_idm
+            new_v = old_idm[4] + a.acc * 2    #ZZZ parameterize
+            new_idm = IDMParam(old_idm[1],old_idm[2],old_idm[3],new_v,old_idm[5],old_idm[6])
+            new_behavior = IDMMOBILBehavior(new_idm,ego_car.behavior.p_mobil,ego_car.behavior.idx)
+            sp.cars[1] = CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, new_behavior, ego_car.id)
+
+            # Update according to IDM
+            neighborhood = get_neighborhood(pp, s, 1)
+            acc = gen_accel(new_behavior, mdp.dmodel, s, neighborhood, 1)   #No rng, so no noise is added here
+            dvs[1] = dt*acc
+            dxs[1] = (s.cars[1].vel + dvs[1]/2.)*dt
+
+            # Lane changing
+            lcs[1] = a.lane_change
+            dys[1] = a.lane_change*dt
+
+        else
+            dvs[1] = a.acc*dt
+            dxs[1] = s.cars[1].vel*dt + a.acc*dt^2/2.
+            lcs[1] = a.lane_change
+            dys[1] = a.lane_change*dt
+        end
 
         for i in 2:nb_cars
             neighborhood = get_neighborhood(pp, s, i)
@@ -382,6 +465,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                                 # Gallium.@enter generate_s(mdp, s, a, dbg_rng)
                                 fname = tempname()*".jld"
                                 println("saving debug args to $fname")
+                                # @enter generate_s(mdp, s, a, dbg_rng)
                                 JLD.@save(fname, mdp, s, a, dbg_rng)
                             end
                             if i == 1

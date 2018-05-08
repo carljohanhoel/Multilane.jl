@@ -6,17 +6,17 @@ const PP = PhysicalParam(4)
 #                     IDMMOBILBehavior("cautious", PP.v_slow+0.5, PP.l_car, 2),
 #                     IDMMOBILBehavior("aggressive", PP.v_fast, PP.l_car, 3)
 #                     ]
-# 
+#
 # const NINE_BEHAVIORS = IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in
 #                                                  enumerate(Iterators.product(["cautious","normal","aggressive"],
 #                                                         [PP.v_slow+0.5;PP.v_med;PP.v_fast],
 #                                                         [PP.l_car]))]
 
-const UNIFORM_MEAN = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, 33.3, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+const UNIFORM_MEAN = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, 25, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
 
-const NORMAL_IDM = IDMParam(1.4, 2.0, 1.5, 120/3.6, 2.0, 4.0) # 33.3
-const TIMID_IDM = IDMParam(1.0, 1.0, 1.8, 100/3.6, 4.0, 4.0) # 27.7
-const AGGRESSIVE_IDM = IDMParam(2.0, 3.0, 1.0, 140/3.6, 1.0, 4.0) # 38.9
+const NORMAL_IDM = IDMParam(1.4, 2.0, 1.5, 90/3.6, 2.0, 4.0) # 33.3
+const TIMID_IDM = IDMParam(1.0, 1.0, 1.8, 70/3.6, 4.0, 4.0) # 27.7
+const AGGRESSIVE_IDM = IDMParam(2.0, 3.0, 1.0, 110/3.6, 1.0, 4.0) # 38.9
 agents_behavior(idm, idx) = IDMMOBILBehavior(idm, MOBILParam(0.6, idm.b, 0.1), idx)
 
 const NORMAL = agents_behavior(NORMAL_IDM, 1)
@@ -26,8 +26,8 @@ const AGGRESSIVE = agents_behavior(AGGRESSIVE_IDM, 3)
 
 function generate_nine_behaviors()
     bs = IDMMOBILBehavior[]
-    velocities = [120/3.6, 100/3.6, 140/3.6]
-    for (i,v) in enumerate(velocities) 
+    velocities = [90/3.6, 70/3.6, 110/3.6]
+    for (i,v) in enumerate(velocities)
         push!(bs, agents_behavior(IDMParam(1.4, 2.0, 1.5, v, 2.0, 4.0), 1+(i-1)*3))
         push!(bs, agents_behavior(IDMParam(1.0, 1.0, 1.8, v, 4.0, 4.0), 2+(i-1)*3))
         push!(bs, agents_behavior(IDMParam(2.0, 3.0, 1.0, v, 1.0, 4.0), 3+(i-1)*3))
@@ -79,7 +79,7 @@ The keyword arguments should be either
     2) problem parameters.
 
 If the the argument in is a problem parameter, if it begins with "solver_", it
-will only be applied to the problem given to the solver, otherwise it will be 
+will only be applied to the problem given to the solver, otherwise it will be
 applied to both problems. The arguments will be applied in order, so solver_
 parameter values should come later.
 """
@@ -158,7 +158,7 @@ function gen_initials(tests::AbstractVector, initials::Dict=Dict{String,Any}();
     return initials
 end
 
-function gen_dmodel(row, behaviors::BehaviorGenerator) 
+function gen_dmodel(row, behaviors::BehaviorGenerator)
     nb_lanes = 4
     nb_cars = 10
     pp = PhysicalParam(nb_lanes,lane_length=100.)
@@ -178,7 +178,7 @@ function gen_dmodel(row, behaviors::BehaviorGenerator)
     # brake_terminate_thresh
     dmodel.brake_terminate_thresh = row[:brake_terminate_thresh]
 
-    return dmodel 
+    return dmodel
 end
 
 function gen_rmodel(row)
@@ -219,7 +219,7 @@ function add_initials!(objects::Dict{String, Any},
             new_table = join(new_table, DataFrame(Dict(p)), kind=:cross)
         end
     end
-    
+
     # run through and check to see if all are the same
     different = false
     for (k,v) in ts.problem_params
@@ -296,7 +296,7 @@ function add_initials!(objects::Dict{String, Any},
             state_lists[key] = collect(keys(these_states))
         end
     end
-    
+
     objects["param_table"] = param_table
     objects["problems"] = problems
     objects["state_lists"] = state_lists
@@ -345,7 +345,7 @@ function setup_stats(tests::AbstractVector, objects::Dict{String,Any})
         test_key = t.key
         solver_key = t.solver_key
         for i in 1:t.nb_problems
-            # find the row  
+            # find the row
             d = Dict{Symbol, Any}()
             solver_d = Dict{Symbol, Any}()
             for (k,v) in t.problem_params

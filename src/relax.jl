@@ -6,6 +6,7 @@ function relaxed_initial_state(mdp::NoCrashProblem, steps=200,
     mdp.dmodel.max_dist = Inf
     mdp.dmodel.brake_terminate_thresh = Inf
     mdp.dmodel.lane_terminate = false
+    mdp.dmodel.semantic_actions = false   #Change to direct acceleration action
     pp = mdp.dmodel.phys_param
     is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, rand(rng,1:pp.nb_lanes), pp.v_med, 0.0, NORMAL, 1)])
     sim = HistoryRecorder(max_steps=steps, rng=rng)

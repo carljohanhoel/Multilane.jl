@@ -574,7 +574,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                     if other == 0
                         sstar = 0.0
                     else
-                        sstar = get_idm_s_star(behavior.p_idm::IDMParam, vel, vel-sp.cars[other].vel::Float64)
+                        sstar = get_idm_s_star(behavior.p_idm, vel, vel-sp.cars[other].vel::Float64)
                     end
                     sstar_margins[j] = clearances[j] - sstar
                 end
@@ -753,6 +753,17 @@ function initial_state(p::NoCrashProblem, rng::AbstractRNG=Base.GLOBAL_RNG; init
     @if_debug println("debugging")
     mdp = NoCrashMDP{typeof(p.rmodel), typeof(p.dmodel.behaviors)}(p.dmodel, p.rmodel, p.discount, p.throw) # make sure an MDP
     return relaxed_initial_state(mdp, initSteps, rng)
+end
+
+function set_ego_behavior!(s::MLState, ego_behavior::BehaviorModel=NORMAL)
+    nb_cars = length(s.cars)
+    ego_car = s.cars[1]
+    cars = Array{CarState}(0)
+    push!(cars, CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, ego_behavior, ego_car.id))
+    for i=2:nb_cars
+        push!(cars, s.cars[i])
+    end
+    return MLState(s.x, s.t, cars)
 end
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)

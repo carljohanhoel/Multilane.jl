@@ -58,8 +58,10 @@ export
     OriginalRewardModel,
     IDMMOBILModel,
     IDMParam,
+    ACCParam,
     MOBILParam,
     IDMMOBILBehavior,
+    ACCBehavior,
     MLPhysicalState,
     CarPhysicalState,
     RobustNoCrashMDP,
@@ -131,6 +133,7 @@ export #data structure stuff
     sbatch_spawn,
     gather_results,
     relaxed_initial_state,
+    set_ego_behavior!,
     nan,
     state
 
@@ -172,6 +175,7 @@ include("physical.jl")
 include("MDP_types.jl")
 include("crash.jl")
 include("IDM.jl")
+include("ACC.jl")
 include("MOBIL.jl")
 include("behavior.jl")
 include("copula.jl")

@@ -212,3 +212,55 @@ function gen_lane_change(bmodel::AvoidModel, dmodel::IDMMOBILModel, s::MLState, 
 
 	return lanechange
 end
+
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+struct ACCBehavior <: BehaviorModel
+	p_idm::ACCParam
+	idx::Int
+end
+
+function ACCBehavior(s::AbstractString,v0::Float64,s0::Float64,idx::Int)
+	return ACCBehavior(ACCParam(s,v0,s0), idx)
+end
+
+function gen_accel(bmodel::ACCBehavior, dmodel::AbstractMLDynamicsModel, s::MLState, neighborhood::Array{Int,1}, idx::Int)
+	pp = dmodel.phys_param
+	dt = pp.dt
+	car = s.cars[idx]
+	vel = car.vel
+
+	dv, ds = get_dv_ds(pp,s,neighborhood,idx,2)
+
+	dvel = get_idm_dv(bmodel.p_idm,dt,vel,dv,ds) #call acc model
+    acc = dvel/dt
+
+    # @assert acc <= 1.01*bmodel.p_idm.a "Acceleration too high: acc=$acc; idm.a=$(bmodel.p_idm.a)"
+
+    @if_debug if ds < 0.0 || !(acc <= 1.01*bmodel.p_idm.a)
+        error("""Bad idm calculation:
+                 ds = $ds
+                 acc = $acc
+                 bmodel.p_idm.a = $(bmodel.p_idm.a)
+        """)
+        # Gallium.@enter accel_dist(bmodel, dmodel, s, neighborhood, idx)
+    end
+    @assert ds >= 0.0 # can get rid of this
+    if neighborhood[2] > 0
+        @assert abs(s.cars[neighborhood[2]].vel - (vel-dv)) < 0.0001
+    end
+
+    max_safe = max_safe_acc(ds, vel, vel-dv, pp.brake_limit, dt)
+
+    # if T, a, and b are small the idm may command something faster than the max_safe
+    # @assert max_safe >= acc "max_safe=$max_safe; acc=$acc"
+    if acc > max_safe
+        acc = max_safe
+    end
+
+    return max(acc, -dmodel.phys_param.brake_limit)
+end

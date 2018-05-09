@@ -1,7 +1,7 @@
 #Runs simulation with MDP and POMDP settings, but uses no MCTS to control the ego vehicle.
 
 push!(LOAD_PATH,joinpath("./src"))
-include("../src/Multilane.jl")
+# include("../src/Multilane.jl")   #ZZZ This may be needed...
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
@@ -35,15 +35,19 @@ dmodel.max_dist = 100000   #Make svisualization fail if max_dist is set to the d
 mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);   #Sets the mdp, which inherits from POMDPs.jl
 rng = MersenneTwister(14)
 
+v_des = 25.0
+# behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+# policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
+# behavior = ACCBehavior(ACCParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), 1)
+ego_acc = ACCBehavior(ACCParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0, 19.44, 30.56, 0.5, 10.0), 1)
+policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane changes
+
 initSteps = 1000
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
+s = set_ego_behavior!(s, ego_acc)
 # @show s.cars[1]
 #visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
-
-v_des = 25.0
-behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
-policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
 
 sim = HistoryRecorder(rng=rng, max_steps=1000, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
@@ -56,8 +60,9 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 end
 gifname = "./Figs/testViz.ogv"
 write(gifname, frames)
+println("video done")
 
-
+##
 error()
 
 

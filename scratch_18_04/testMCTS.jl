@@ -143,6 +143,8 @@ end
 pow_updater(up::AggressivenessUpdater) = AggressivenessPOWFilter(up.params)
 pow_updater(up::BehaviorParticleUpdater) = BehaviorPOWFilter(up.params)
 
+v_des = 25.0
+ego_acc = ACCBehavior(ACCParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0, 19.44, 30.56, 0.5, 10.0), 1)
 
 ## Choice of solver
 
@@ -161,6 +163,7 @@ i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
+is = set_ego_behavior!(is, behavior)
 write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0.png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())

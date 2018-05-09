@@ -78,7 +78,7 @@ function get_neighborhood(pp::PhysicalParam,s::Union{MLState,MLObs},idx::Int)
 	5    |car|   2 ->
 	4      |     1
 	where 1/2/3 is the front, 3/6 is left
-    
+
     Note: The same car can occupy two spots if the vehicle is changing lanes.
 	"""
 
@@ -140,13 +140,13 @@ function get_dv_ds(pp::PhysicalParam,s::MLState,nbhd::Array{Int,1},idx::Int,idy:
 	#dv: if ahead: me - him; behind: him - me
 	dv = nbr != 0 ? -1*sign((idy-3.5))*(car.vel - s.cars[nbr].vel) : 0.
 
-	ds = nbr != 0 ? abs(s.cars[nbr].x - car.x) - pp.l_car : 1000.
+	ds = nbr != 0 ? abs(s.cars[nbr].x - car.x) - pp.l_car : 1000000.
 
 	return dv::Float64, ds::Float64
 end
 
 """
-Return two numbers first if the lane change is made, second if the lane change is not made 
+Return two numbers first if the lane change is made, second if the lane change is not made
 
 (I think) - Zach (7/13/16)
 """
@@ -174,7 +174,7 @@ function get_rear_accel(pp::PhysicalParam,s::MLState,nbhd::Array{Int,1},idx::Int
 	# 	behind_idm = NORMAL_IDM
 	# else
 	# end
-	behind_idm = s.cars[nbhd[5+dir]].behavior.p_idm::IDMParam
+	behind_idm = s.cars[nbhd[5+dir]].behavior.p_idm
 	a_follower = get_idm_dv(behind_idm,dt,v_behind,dv_behind,s_behind)/dt #distance behind is a negative number
 	a_follower_ = get_idm_dv(behind_idm,dt,v_behind,dv_behind_,s_behind_)/dt
 

@@ -100,7 +100,7 @@ function test_idm_dv()
 	# NOTE this just prints it out for general sanity checking
 	#TODO: calculate by hand...? or use existing examples if can be found
 	nb_lanes = 2
-	_a = MLAction(0.,0.)
+	_a = MLAction(0.,0.,0.0)
 	pp = PhysicalParam(nb_lanes,lane_length=48.)
 	bs = IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in enumerate(product(["cautious","normal","aggressive"],[pp.v_slow;pp.v_med;pp.v_fast],[pp.l_car]))]
 	#CASE: it's faster, but there's no space--is this even a real case?

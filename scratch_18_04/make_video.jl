@@ -44,7 +44,7 @@ if !isdefined(:hist) || hist == nothing
                            node_sr_belief_updater=BehaviorPOWFilter(wup),
                            rng=MersenneTwister(7),
                            tree_in_info=true,
-                           default_action=MLAction(0.0, 0.0) # maintain at the end
+                           default_action=MLAction(0.0, 0.0, 0.0) # maintain at the end
                           )
     planner = solve(solver, pomdp)
 

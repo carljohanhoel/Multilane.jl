@@ -32,15 +32,15 @@ function action(p::Simple,s::Union{MLState,MLObs})
 
     #if can't move towards desired lane sweep through accelerating and decelerating
 
-    if is_safe(p.mdp, s, MLAction(0.,lc))
-        return MLAction(0.,lc)
+    if is_safe(p.mdp, s, MLAction(0.,lc,0.0))
+        return MLAction(0.,lc,0.0)
     end
 
     # maintain distance
     nbhd = get_neighborhood(dmodel.phys_param,s,1)
 
     if nbhd[2] == 0 && nbhd[5] == 0
-        return MLAction(0.,0.)
+        return MLAction(0.,0.,0.0)
     end
 
     dist_ahead = nbhd[2] != 0 ? s.cars[nbhd[2]].x - s.cars[1].x : Inf
@@ -52,7 +52,7 @@ function action(p::Simple,s::Union{MLState,MLObs})
 
     max_accel = max_safe_acc(p.mdp, s, 0.0)
 
-    return MLAction(min(accel, max_accel),0.)
+    return MLAction(min(accel, max_accel),0.,0.0)
 end
 action(p::Simple, b::BehaviorBelief) = action(p, b.physical)
 function action(pol::Simple, s::QMDPState)
@@ -76,7 +76,7 @@ mutable struct BehaviorPolicy <: Policy
 end
 solve(s::BehaviorSolver, p::NoCrashProblem) = BehaviorPolicy(p, s.b, s.keep_lane, s.rng)
 
-function action(p::BehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0))
+function action(p::BehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0,0.0))
     nbhd = get_neighborhood(p.problem.dmodel.phys_param, s, 1)
     acc = gen_accel(p.b, p.problem.dmodel, s, nbhd, 1, p.rng)
     if p.keep_lane
@@ -84,10 +84,10 @@ function action(p::BehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0))
     else
         lc = gen_lane_change(p.b, p.problem.dmodel, s, nbhd, 1)
     end
-    return MLAction(acc, lc)
+    return MLAction(acc, lc,0.0)
 end
-action(p::BehaviorPolicy, b::AggressivenessBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
-action(p::BehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
+action(p::BehaviorPolicy, b::AggressivenessBelief, a::MLAction=MLAction(0.0,0.0,0.0)) = action(p, most_likely_state(b))
+action(p::BehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=MLAction(0.0,0.0,0.0)) = action(p, most_likely_state(b))
 
 mutable struct DeterministicBehaviorSolver <: Solver
     b::BehaviorModel
@@ -100,7 +100,7 @@ mutable struct DeterministicBehaviorPolicy <: Policy
 end
 solve(s::DeterministicBehaviorSolver, p::NoCrashProblem) = DeterministicBehaviorPolicy(p, s.b, s.keep_lane, s.rng)
 
-function action(p::DeterministicBehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0))
+function action(p::DeterministicBehaviorPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0,0.0))
     nbhd = get_neighborhood(p.problem.dmodel.phys_param, s, 1)
     acc = gen_accel(p.b, p.problem.dmodel, s, nbhd, 1) #No rng
     if p.keep_lane
@@ -108,10 +108,10 @@ function action(p::DeterministicBehaviorPolicy, s::MLState, a::MLAction=MLAction
     else
         lc = gen_lane_change(p.b, p.problem.dmodel, s, nbhd, 1)
     end
-    return MLAction(acc, lc)
+    return MLAction(acc, lc, 0.0)
 end
-action(p::DeterministicBehaviorPolicy, b::AggressivenessBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
-action(p::DeterministicBehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=MLAction(0.0,0.0)) = action(p, most_likely_state(b))
+action(p::DeterministicBehaviorPolicy, b::AggressivenessBelief, a::MLAction=MLAction(0.0,0.0,0.0)) = action(p, most_likely_state(b))
+action(p::DeterministicBehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=MLAction(0.0,0.0,0.0)) = action(p, most_likely_state(b))
 
 mutable struct IDMLaneSeekingSolver <: Solver
     b::BehaviorModel
@@ -125,16 +125,16 @@ mutable struct IDMLaneSeekingPolicy <: Policy
 end
 solve(s::IDMLaneSeekingSolver, p::NoCrashProblem) = IDMLaneSeekingPolicy(p, s.b, s.rng)
 
-function action(p::IDMLaneSeekingPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0))
+function action(p::IDMLaneSeekingPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0,0.0))
     nbhd = get_neighborhood(p.problem.dmodel.phys_param, s, 1)
     acc = gen_accel(p.b, p.problem.dmodel, s, nbhd, 1, p.rng)
     # try to positive lanechange
     # lc = problem.dmodel.lane_change_rate * !is_lanechange_dangerous(pp,s,nbhd,1,1)
     lc = p.problem.dmodel.lane_change_rate
-    if is_safe(p.problem, s, MLAction(acc, lc))
-        return MLAction(acc, lc)
+    if is_safe(p.problem, s, MLAction(acc, lc,0.0))
+        return MLAction(acc, lc,0.0)
     end
-    return MLAction(acc, 0.0)
+    return MLAction(acc, 0.0,0.0)
 end
 
 

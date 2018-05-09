@@ -38,7 +38,7 @@ rng = MersenneTwister(14)
 initSteps = 1000
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
 # @show s.cars[1]
-#visualize(mdp,s,MLAction(0,0))
+#visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
 
 v_des = 25.0

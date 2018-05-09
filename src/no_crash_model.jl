@@ -97,11 +97,11 @@ const NB_SEMANTIC_ACTIONS = 5
 function NoCrashActionSpace(mdp::NoCrashProblem)
     accels = (-mdp.dmodel.adjustment_acceleration, 0.0, mdp.dmodel.adjustment_acceleration)
     lane_changes = (-mdp.dmodel.lane_change_rate, 0.0, mdp.dmodel.lane_change_rate)
-    NORMAL_ACTIONS = MLAction[MLAction(a,l) for (a,l) in Iterators.product(accels, lane_changes)] # this should be in the problem
+    NORMAL_ACTIONS = MLAction[MLAction(a,l,0.0) for (a,l) in Iterators.product(accels, lane_changes)] # this should be in the problem
     return NoCrashActionSpace(NORMAL_ACTIONS, IntSet(), MLAction()) # note: brake will be calculated later based on the state
 end
 function NoCrashSemanticActionSpace(mdp::NoCrashProblem)
-    actions = [MLAction(-1.0,0.0),MLAction(0.0,0.0),MLAction(+1.0,0.0),MLAction(0.0,-1.0),MLAction(0.0,+1.0)]
+    actions = [MLAction(-1.0,0.0,1.0),MLAction(0.0,0.0,1.0),MLAction(+1.0,0.0,1.0),MLAction(0.0,-1.0,1.0),MLAction(0.0,+1.0,1.0)]
     return NoCrashSemanticActionSpace(actions, IntSet())
 end
 
@@ -153,9 +153,9 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
         brake_acc = calc_brake_acc(mdp, s)
         # brake = MLAction(brake_acc, 0)
         if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0
-            brake = MLAction(brake_acc, s.cars[1].lane_change) #Forces lane change to finish. This is because otherwise there are problems with the IDM/MOBIL rollout, since it can decide to stay inbetween two lanes
+            brake = MLAction(brake_acc, s.cars[1].lane_change,0.0) #Forces lane change to finish. This is because otherwise there are problems with the IDM/MOBIL rollout, since it can decide to stay inbetween two lanes
         else
-            brake = MLAction(brake_acc, 0)
+            brake = MLAction(brake_acc, 0,0.0)
         end
         return NoCrashActionSpace(as.NORMAL_ACTIONS, acceptable, brake)
     end
@@ -334,9 +334,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         dys = Vector{Float64}(nb_cars)
         lcs = Vector{Float64}(nb_cars)
 
-
-
-        if mdp.dmodel.semantic_actions
+        if mdp.dmodel.semantic_actions && a.semantic == 1.0
             # Change ego behavior
             ego_car = s.cars[1]
             old_idm = ego_car.behavior.p_idm

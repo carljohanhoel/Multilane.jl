@@ -39,7 +39,7 @@ function test_get_neighborhood()
 	cs = CarState[CarState(6.,2,31.,0,bs[1],1)]
 	dp1 = 6.-pp.l_car
 	dp2 = 6.-pp.l_car
-	_a = MLAction(0,0)
+	_a = MLAction(0,0,0.0)
 
 	#just make sure it doesn't explode--this should be handled by get_mobil_lane_change
 	dmodel = IDMMOBILModel(length(cs), pp)
@@ -126,7 +126,7 @@ function test_is_lanechange_dangerous()
 	println("\t\tTesting is_lanechange_dangerous")
 
 	nb_lanes = 3
-	_a = MLAction(0,0)
+	_a = MLAction(0,0,0.0)
 	pp = PhysicalParam(nb_lanes,lane_length=12.)
 	bs = IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in enumerate(product(["cautious","normal","aggressive"],[pp.v_slow;pp.v_med;pp.v_fast],[pp.l_car]))]
 	#CASE: no one, in the way
@@ -186,7 +186,7 @@ end
 function test_get_rear_accel()
 	println("\t\tTesting get_rear_accel")
 	nb_lanes = 3
-	_a = MLAction(0,0)
+	_a = MLAction(0,0,0.0)
 	pp = PhysicalParam(nb_lanes,lane_length=12.)
 	bs = IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in enumerate(product(["cautious","normal","aggressive"],[pp.v_slow;pp.v_med;pp.v_fast],[pp.l_car]))]
 	#No one in that position
@@ -223,7 +223,7 @@ end
 function test_get_mobil_lane_change()
 	println("\t\tTesting get_mobil_lane_change")
 	nb_lanes = 2
-	_a = MLAction(0,0)
+	_a = MLAction(0,0,0.0)
 	pp = PhysicalParam(nb_lanes,lane_length=12.)
 	bs = IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in enumerate(product(["cautious","normal","aggressive"],[pp.v_slow;pp.v_med;pp.v_fast],[pp.l_car]))]
 	#CASE: it's faster, but there's no space--is this even a real case?
@@ -279,7 +279,7 @@ function failure_2()
     mdp = NoCrashMDP{NoCrashRewardModel, typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);
     rng = MersenneTwister(2)
     s = Multilane.MLState(0.0,0.0,[Multilane.CarState(50.0,1.0,27.0,0.0,Multilane.NORMAL,0),Multilane.CarState(45.66875308699299,2.0,29.042803490064543,-0.6666666666666666,Multilane.IDMMOBILBehavior(Multilane.IDMParam(2.0,2.0,0.8,35.0,4.0,4.0),Multilane.MOBILParam(0.0,4.0,0.2),9),0),Multilane.CarState(85.41074952313767,3.0,29.831781823255017,0.0,Multilane.IDMMOBILBehavior(Multilane.IDMParam(2.0,2.0,0.8,31.0,4.0,4.0),Multilane.MOBILParam(0.0,4.0,0.2),6),0),Multilane.CarState(13.78112065279241,3.0,27.0,0.0,Multilane.IDMMOBILBehavior(Multilane.IDMParam(1.5,1.5,1.4,35.0,4.0,4.0),Multilane.MOBILParam(0.25,4.0,0.2),8),0),Multilane.CarState(5.897872040018292,1.0,27.39955827605183,0.0,Multilane.IDMMOBILBehavior(Multilane.IDMParam(1.5,1.5,1.4,35.0,4.0,4.0),Multilane.MOBILParam(0.25,4.0,0.2),8),0)])
-    a = MLAction(0.0,0.0)
+    a = MLAction(0.0,0.0,0.0)
     sp, r = generate_sr(mdp, s, a, rng)
     @test !is_crash(mdp, s, sp)
 end

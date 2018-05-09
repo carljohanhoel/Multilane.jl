@@ -102,6 +102,7 @@ problem = pomdp    #Choose which problem to work with
 ## Solver definition
 if scenario == "continuous_driving"
     rollout_problem = deepcopy(pomdp)
+    rollout_problem.dmodel.semantic_actions = false
     rollout_problem.dmodel.max_dist = Inf
     rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
     rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)

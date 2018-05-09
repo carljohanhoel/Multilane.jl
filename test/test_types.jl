@@ -106,12 +106,12 @@ function test_MLAction_creation()
 end
 
 function test_MLAction_equality()
-	as = [MLAction(x[1],x[2]) for x in product([-1;0;1],[-1;0;1])]
+	as = [MLAction(x[1],x[2],0.0) for x in product([-1;0;1],[-1;0;1])]
 	test_equality("MLAction",as)
 end
 
 function test_MLAction_hashing()
-	as = [MLAction(x[1],x[2]) for x in product([-1;0;1],[-1;0;1])]
+	as = [MLAction(x[1],x[2],0.0) for x in product([-1;0;1],[-1;0;1])]
 	test_hashing("MLAction",as)
 end
 

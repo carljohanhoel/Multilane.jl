@@ -95,15 +95,15 @@ function test_is_crash()
 	#env car going fast in right lane: (7,1) corresponds to right behind the agent car area + 0.25m or 0.5m
 	_cs_r_fast = CarState(12.,1,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),10)
 	s = MLState(1,27.,CarState[_cs_r_fast],6.)
-	a = MLAction(0,0)
+	a = MLAction(0,0,0.0)
 	#going out of top boundary
 	assert(!is_crash(p,s,a))
 	#going out of bottom boundary
 	s = MLState(1,35.,CarState[_cs_l_slow],6.)
-	a = MLAction(0,1)
+	a = MLAction(0,1,0.0)
 	assert(!is_crash(p,s,a))
 	#CASE: do nothing = no costs
-	assert(!is_crash(p,MLState(1,27.,CarState[cs_oob],6.),MLAction(0,0)))
+	assert(!is_crash(p,MLState(1,27.,CarState[cs_oob],6.),MLAction(0,0,0.0)))
 	#CASE: moving = cost
 	#=
 	assert(!is_crash(p,MLState(1,27.,CarState[cs_oob]),MLAction(1,0)))

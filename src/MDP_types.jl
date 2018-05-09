@@ -94,16 +94,17 @@ end
 struct MLAction
     acc::Float64
     lane_change::Float64 # ydot
+    semantic::Float64
 end
-MLAction() = MLAction(0,0)
-==(a::MLAction,b::MLAction) = (a.acc==b.acc) && (a.lane_change==b.lane_change)
-Base.hash(a::MLAction,h::UInt64=zero(UInt64)) = hash(a.acc,hash(a.lane_change,h))
+MLAction() = MLAction(0,0,0.0)
+==(a::MLAction,b::MLAction) = (a.acc==b.acc) && (a.lane_change==b.lane_change) && (a.semantic==b.semantic)
+Base.hash(a::MLAction,h::UInt64=zero(UInt64)) = hash(a.acc,hash(a.lane_change,hash(a.semantic,h)))
 function MLAction(x::Array{Float64,1})
-	assert(length(x)==2)
+	assert(length(x)==3)
 	lane_change = abs(x[2]) <= 0.3 ? 0 : sign(x[2])
-	return MLAction(x[1],lane_change)
+	return MLAction(x[1],lane_change,x[3])
 end
-vec(a::MLAction) = Float64[a.acc;a.lane_change]
+vec(a::MLAction) = Float64[a.acc;a.lane_change;a.semantic]
 
 const OriginalMDP = MLMDP{MLState, MLAction, IDMMOBILModel, OriginalRewardModel}
 

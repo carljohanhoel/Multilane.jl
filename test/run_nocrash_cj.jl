@@ -39,7 +39,7 @@ v_des = 25.0
 # behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
 # policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
 # behavior = ACCBehavior(ACCParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), 1)
-ego_acc = ACCBehavior(ACCParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0, 19.44, 30.56, 0.5, 10.0), 1)
+ego_acc = ACCBehavior(ACCParam(v_des), 1)
 policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane changes
 
 initSteps = 1000
@@ -49,7 +49,7 @@ s = set_ego_behavior!(s, ego_acc)
 #visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
 
-sim = HistoryRecorder(rng=rng, max_steps=1000, show_progress=true) # initialize a random number generator
+sim = HistoryRecorder(rng=rng, max_steps=100, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
 
 println("sim done")

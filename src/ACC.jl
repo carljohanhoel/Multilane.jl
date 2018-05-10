@@ -5,7 +5,7 @@
 ##ACC Model##
 #############
 
-struct ACCParam <: FieldVector{6, Float64}
+struct ACCParam <: FieldVector{13, Float64}
 	a::Float64 #max  comfy acceleration
 	b::Float64 #max comfy brake speed
 	T::Float64 #desired safety time headway
@@ -14,9 +14,32 @@ struct ACCParam <: FieldVector{6, Float64}
 	del::Float64 #'accel exponent'
 	min_v::Float64 #minimum set speed
 	max_v::Float64 #maximum set speed
+	step_v::Float64 #step v
 	min_T::Float64 #minimum set T
 	max_T::Float64 #maximum set T
+	step_T::Float64 #step T
+	standard_T::Float64 #normal time gap, which controller is reset to when controlling speed
 end #ACCParam
+
+function ACCParam(v0::Float64;
+				  a::Float64=1.4,
+				  b::Float64=2.0,
+				  T::Float64=1.5,
+				  s0::Float64=2.0,
+				  del::Float64=4.0,
+				  min_v::Float64=19.44,
+				  max_v::Float64=30.56,
+				  step_v::Float64=1.0,
+				  min_T::Float64=0.5,
+				  max_T::Float64=5.0,
+				  step_T::Float64=0.5,
+				  standard_T::Float64=1.5)
+
+	assert(max_v > min_v)
+	assert(max_T > min_T)
+
+	return ACCParam(a, b, T, v0, s0, del, min_v, max_v, step_v, min_T, max_T, step_T, standard_T)
+end
 
 StaticArrays.similar_type(::Type{ACCParam}, ::Type{Float64}, ::Size{(6,)}) = ACCParam
 

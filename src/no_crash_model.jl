@@ -120,11 +120,28 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
             if s.cars[1].lane_change != 0.0 && mod(s.cars[1].y,1) != 0 && a.lane_change == 0
                 continue
             end
-            if s.cars[1].behavior.p_idm[4] <= 17 && a.acc == -1 #ZZZ parameterize!!!
-                continue
-            end
-            if s.cars[1].behavior.p_idm[4] >= 23 && a.acc == 1
-                continue
+
+            # if no vehicle in front
+            #     do below
+            # if vehicle in front
+            #     do similar as below, but for time gap
+            neighborhood = get_neighborhood(mdp.dmodel.phys_param, s, 1)   #Car 1 (ego)
+            dv, ds = get_dv_ds(mdp.dmodel.phys_param,s,neighborhood,1,2)   #Car 1 (ego), neighborhood position 2
+            ego_params = s.cars[1].behavior.p_idm
+            if ds > ego_params.max_T   #Front vehicle far away -> control speed
+                if a.acc == -1 && ego_params.v0 - ego_params.dv <= ego_params.min_v
+                    continue
+                end
+                if a.acc == 1 && ego_params.v0 + ego_params.dv >= ego_params.max_v
+                    continue
+                end
+            else   #Front vehicle close -> control gap time
+                if a.acc == -1 && ego_params.T - ego_params.dT <= ego_params.min_T
+                    continue
+                end
+                if a.acc == 1 && ego_params.T + ego_params.dT >= ego_params.max_T
+                    continue
+                end
             end
             # prevent running into the person in front or to the side
             if is_safe(mdp, s, as.actions[i]) || a.lane_change == 0.0 #Now only checks if safe when changing lanes
@@ -336,15 +353,23 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
 
         if mdp.dmodel.semantic_actions && a.semantic == 1.0
             # Change ego behavior
+            neighborhood = get_neighborhood(mdp.dmodel.phys_param, s, 1)   #Car 1 (ego)
+            dv, ds = get_dv_ds(mdp.dmodel.phys_param,s,neighborhood,1,2)   #Car 1 (ego), neighborhood position 2
             ego_car = s.cars[1]
-            old_idm = ego_car.behavior.p_idm
-            new_v = old_idm[4] + a.acc * 2    #ZZZ parameterize
-            new_idm = IDMParam(old_idm[1],old_idm[2],old_idm[3],new_v,old_idm[5],old_idm[6])
-            new_behavior = IDMMOBILBehavior(new_idm,ego_car.behavior.p_mobil,ego_car.behavior.idx)
-            sp.cars[1] = CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, new_behavior, ego_car.id)
+            ego_params = ego_car.behavior.p_idm
+            if ds > ego_params.max_T   #Front vehicle far away -> control speed
+                new_v = ego_params.v0 + a.acc * ego_params.step_v
+                new_params = ACCParam(new_v,T=ego_params.standard_T)   #Sets new speed and resets time gap
+                new_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
+                s.cars[1] = CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, new_behavior, ego_car.id)
+            else   #Front vehicle close -> control gap time
+                new_T = ego_params.T + a.acc * ego_params.step_T
+                new_params = ACCParam(25,T=new_T)   #ZZZ parameterize 25, get from planner!!!   #Resets speed and sets new time gap
+                new_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
+                s.cars[1] = CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, new_behavior, ego_car.id)
+            end
 
             # Update according to IDM
-            neighborhood = get_neighborhood(pp, s, 1)
             acc = gen_accel(new_behavior, mdp.dmodel, s, neighborhood, 1)   #No rng, so no noise is added here
             dvs[1] = dt*acc
             dxs[1] = (s.cars[1].vel + dvs[1]/2.)*dt

@@ -97,7 +97,7 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
-problem = pomdp    #Choose which problem to work with
+problem = mdp    #Choose which problem to work with
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -148,8 +148,8 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
 
-# method = "omniscient"
-method = "mlmpc"
+method = "omniscient"
+# method = "mlmpc"
 solver = solvers[method]
 
 sim_problem = deepcopy(problem)
@@ -175,7 +175,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=10, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -194,7 +194,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 6.00
+t = 37.5
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 print(hist.action_hist[step])

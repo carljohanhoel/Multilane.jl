@@ -61,7 +61,11 @@ function accel_dist(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsModel, s
         """)
         # Gallium.@enter accel_dist(bmodel, dmodel, s, neighborhood, idx)
     end
+    if ds < 0.0
+        Gallium.@enter accel_dist(bmodel, dmodel, s, neighborhood, idx)
+    end
     @assert ds >= 0.0 # can get rid of this
+
     if neighborhood[2] > 0
         @assert abs(s.cars[neighborhood[2]].vel - (vel-dv)) < 0.0001
     end

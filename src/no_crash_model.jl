@@ -101,7 +101,7 @@ function NoCrashActionSpace(mdp::NoCrashProblem)
     return NoCrashActionSpace(NORMAL_ACTIONS, IntSet(), MLAction()) # note: brake will be calculated later based on the state
 end
 function NoCrashSemanticActionSpace(mdp::NoCrashProblem)
-    actions = [MLAction(-1.0,0.0,1.0),MLAction(0.0,0.0,1.0),MLAction(+1.0,0.0,1.0),MLAction(0.0,-1.0,1.0),MLAction(0.0,+1.0,1.0)]
+    actions = [MLAction(0.0,0.0,1.0),MLAction(-1.0,0.0,1.0),MLAction(+1.0,0.0,1.0),MLAction(0.0,-1.0,1.0),MLAction(0.0,+1.0,1.0)]
     return NoCrashSemanticActionSpace(actions, IntSet())
 end
 
@@ -121,25 +121,21 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
                 continue
             end
 
-            # if no vehicle in front
-            #     do below
-            # if vehicle in front
-            #     do similar as below, but for time gap
             neighborhood = get_neighborhood(mdp.dmodel.phys_param, s, 1)   #Car 1 (ego)
             dv, ds = get_dv_ds(mdp.dmodel.phys_param,s,neighborhood,1,2)   #Car 1 (ego), neighborhood position 2
             ego_params = s.cars[1].behavior.p_idm
-            if ds > ego_params.max_T   #Front vehicle far away -> control speed
-                if a.acc == -1 && ego_params.v0 - ego_params.dv <= ego_params.min_v
+            if ds > ego_params.max_T*s.cars[1].vel   #Front vehicle far away -> control speed
+                if a.acc == -1 && ego_params.v0 - ego_params.step_v < ego_params.min_v
                     continue
                 end
-                if a.acc == 1 && ego_params.v0 + ego_params.dv >= ego_params.max_v
+                if a.acc == 1 && ego_params.v0 + ego_params.step_v > ego_params.max_v
                     continue
                 end
             else   #Front vehicle close -> control gap time
-                if a.acc == -1 && ego_params.T - ego_params.dT <= ego_params.min_T
+                if a.acc == 1 && ego_params.T - ego_params.step_T < ego_params.min_T
                     continue
                 end
-                if a.acc == 1 && ego_params.T + ego_params.dT >= ego_params.max_T
+                if a.acc == -1 && ego_params.T + ego_params.step_T > ego_params.max_T
                     continue
                 end
             end
@@ -147,6 +143,11 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
             if is_safe(mdp, s, as.actions[i]) || a.lane_change == 0.0 #Now only checks if safe when changing lanes
                 push!(acceptable, i)
             end
+        end
+        #Hack: There can be situations where a lane change is first deemed safe, but halfway through it becomes unsafe and it is also unsafe to go back. In that case, there will be no possible actions. For such a case,insert simple action of changing nothing.
+        if length(acceptable) == 0
+            push!(acceptable, 1) #Action 1 does nothing
+            print("No possible actions, inserting 0, 0")
         end
         return NoCrashSemanticActionSpace(as.actions,acceptable)
     else
@@ -295,7 +296,7 @@ Test whether, if the ego vehicle takes action a, it will always be able to slow 
 """
 function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
     dt = mdp.dmodel.phys_param.dt
-    if a.acc >= max_safe_acc(mdp, s, a.lane_change)
+    if a.acc >= max_safe_acc(mdp, s, a.lane_change)   #ZZZ a.acc is real acceleration here, but is controlled with ACC
         return false
     end
     # check whether we will go into anyone else's lane so close that they might hit us or we might run into them
@@ -357,20 +358,19 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             dv, ds = get_dv_ds(mdp.dmodel.phys_param,s,neighborhood,1,2)   #Car 1 (ego), neighborhood position 2
             ego_car = s.cars[1]
             ego_params = ego_car.behavior.p_idm
-            if ds > ego_params.max_T   #Front vehicle far away -> control speed
+            if ds > ego_params.max_T*ego_car.vel   #Front vehicle far away -> control speed
                 new_v = ego_params.v0 + a.acc * ego_params.step_v
                 new_params = ACCParam(new_v,T=ego_params.standard_T)   #Sets new speed and resets time gap
-                new_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
-                s.cars[1] = CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, new_behavior, ego_car.id)
+                new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
             else   #Front vehicle close -> control gap time
-                new_T = ego_params.T + a.acc * ego_params.step_T
-                new_params = ACCParam(25,T=new_T)   #ZZZ parameterize 25, get from planner!!!   #Resets speed and sets new time gap
-                new_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
-                s.cars[1] = CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, new_behavior, ego_car.id)
+                new_T = ego_params.T - a.acc * ego_params.step_T
+                new_params = ACCParam(25.0,T=new_T)   #ZZZ parameterize 25, get from planner!!!   #Resets speed and sets new time gap
+                new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
+
             end
 
             # Update according to IDM
-            acc = gen_accel(new_behavior, mdp.dmodel, s, neighborhood, 1)   #No rng, so no noise is added here
+            acc = gen_accel(new_ego_behavior, mdp.dmodel, s, neighborhood, 1)   #No rng, so no noise is added here
             dvs[1] = dt*acc
             dxs[1] = (s.cars[1].vel + dvs[1]/2.)*dt
 
@@ -383,6 +383,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             dxs[1] = s.cars[1].vel*dt + a.acc*dt^2/2.
             lcs[1] = a.lane_change
             dys[1] = a.lane_change*dt
+            new_ego_behavior = s.cars[1].behavior   #Keep old behavior
         end
 
         for i in 2:nb_cars
@@ -396,6 +397,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
 
             lcs[i] = gen_lane_change(behavior, mdp.dmodel, s, neighborhood, i)
             dys[i] = lcs[i] * dt
+
         end
 
         ## Consistency checking ##
@@ -555,7 +557,11 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             if xp < 0.0 || xp >= pp.lane_length #Limits maximum distance from ego vehicle before a vehicle is deleted
                 push!(exits, i)
             else
-                sp.cars[i] = CarState(xp, yp, velp, lcs[i], car.behavior, s.cars[i].id)
+                if i==1
+                    sp.cars[i] = CarState(xp, yp, velp, lcs[i], new_ego_behavior, s.cars[i].id)
+                else
+                    sp.cars[i] = CarState(xp, yp, velp, lcs[i], car.behavior, s.cars[i].id)
+                end
             end
         end
 

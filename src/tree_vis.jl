@@ -18,7 +18,10 @@ function MCTS.tooltip_tag(s::MLState)
         desc = "[$(uppercase(string(get(s.terminal))))] "
     end
     desc *= "("
-    for c in s.cars
+    c = s.cars[1]
+    desc *= @sprintf("[%.1f,%.1f,v:%.1f,l:%.1f,V:%.1f,T:%.1f]", c.x, c.y, c.vel, c.lane_change, c.behavior.p_idm.v0, c.behavior.p_idm.T)
+    # desc *= @sprintf("|||")
+    for c in s.cars[2:end]
         desc *= @sprintf("[%.1f,%.1f,v:%.1f,l:%.1f] ", c.x, c.y, c.vel, c.lane_change)
     end
     desc *= ")"

@@ -1,7 +1,7 @@
 # ZZZ Removed precompilation of Multilane, not sure what that means
 
 push!(LOAD_PATH,joinpath("./src"))
-# include("../src/Multilane.jl")   #ZZZ This may be needed...
+#include("../src/Multilane.jl")   #ZZZ This may be needed...
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
@@ -158,13 +158,14 @@ sim_problem.throw=true
 
 ## Run simulations
 
-# for i in 1:N
+#N = 100
+#for i in 1:N
 i = 1
-rng_seed = i+40000
+rng_seed = i+40001
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 is = set_ego_behavior!(is, ego_acc)
-write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0.png")
+write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0_i"*string(i)*".png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
 ips = MLPhysicalState(is)
@@ -175,7 +176,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=50, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -194,21 +195,22 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 37.5
-step = convert(Int, t / pp.dt) + 1
-write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-print(hist.action_hist[step])
-inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+#t = 37.5
+#step = convert(Int, t / pp.dt) + 1
+#write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+#print(hist.action_hist[step])
+#inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+## inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 #Produce video
 frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/testMCTS.ogv"
+gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
 write(gifname, frames)
 
+#end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

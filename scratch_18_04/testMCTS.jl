@@ -202,6 +202,7 @@ end
 #inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
 ## inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
+
 #Produce video
 frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")

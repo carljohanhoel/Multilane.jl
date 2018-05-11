@@ -104,7 +104,7 @@ function gen_lane_change(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsMod
 	car = s.cars[idx]
 	lane_change = car.lane_change #this is a velocity in the y direction in LANES PER SECOND
 	lane_ = car.y
-
+    #ZZZ Line below assumes lane change takes 2*sample_time. This may have to be changed.
 	if mod(lane_-0.5,1) == 0. #in between lanes. #C, This forces a lane change to be completed before a new can be performed by MOBIL.
         @assert lane_change != 0
 		return lane_change

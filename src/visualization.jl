@@ -40,11 +40,11 @@ function visualize(p, s, r; tree=nothing)
     roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
     push!(stuff, roadway)
     str = @sprintf("t: %6.2f\nx: %6.2f\nvel: %6.2f", s.t, s.x, s.cars[1].vel)
-    if typeof(s.cars[1].behavior) == ACCBehavior
-        str *+ @sprintf("v_set: %6.2f\nT_set: %6.2f", s.cars[1].behavior.v0, s.cars[1].behavior.T)
-    end
     if r != nothing
         str *= @sprintf("\nr: %6.2f", r)
+    end
+    if typeof(s.cars[1].behavior) == ACCBehavior
+        str *= @sprintf("\nv_set: %6.2f\nT_set: %6.2f", s.cars[1].behavior.p_idm.v0, s.cars[1].behavior.p_idm.T)
     end
     push!(stuff, str)
     if tree != nothing

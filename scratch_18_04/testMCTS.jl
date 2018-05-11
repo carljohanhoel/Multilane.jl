@@ -158,10 +158,10 @@ sim_problem.throw=true
 
 ## Run simulations
 
-#N = 100
-#for i in 1:N
-i = 1
-rng_seed = i+40001
+N = 25
+for i in 1:N
+#i = 1
+rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 is = set_ego_behavior!(is, ego_acc)
@@ -176,7 +176,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -211,7 +211,7 @@ end
 gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
 write(gifname, frames)
 
-#end
+end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

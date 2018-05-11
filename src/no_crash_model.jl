@@ -144,10 +144,16 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
                 push!(acceptable, i)
             end
         end
-        #Hack: There can be situations where a lane change is first deemed safe, but halfway through it becomes unsafe and it is also unsafe to go back. In that case, there will be no possible actions. For such a case,insert simple action of changing nothing.
+        #Hack: There can be situations where a lane change is first deemed safe, but halfway through it becomes unsafe and it is also unsafe to go back. In that case, there will be no possible actions.
+        # For such a case, finish the lane change.
         if length(acceptable) == 0
-            push!(acceptable, 1) #Action 1 does nothing
-            print("No possible actions, inserting 0, 0")
+            previous_lane_change = s.cars[1].lane_change
+            for i in 1:NB_SEMANTIC_ACTIONS
+                if as.actions[i].lane_change == previous_lane_change
+                    push!(acceptable,i)
+                end
+            end
+            # print("No possible actions, inserting " * string(previous_lane_change) * " at time "*string(s.t)*"\n")
         end
         return NoCrashSemanticActionSpace(as.actions,acceptable)
     else
@@ -376,7 +382,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
 
             # Lane changing
             lcs[1] = a.lane_change
-            dys[1] = a.lane_change*dt
+            dys[1] = a.lane_change*mdp.dmodel.lane_change_rate*dt
 
         else
             dvs[1] = a.acc*dt
@@ -530,7 +536,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 sp.terminal = Nullable{Symbol}(:brake)
             end
 
-            # check if a lane was crossed and snap back to it
+            # check if a lane was crossed and snap back to it (ZZZ this may have to be moved to before consistency checking, to avoid crashes)
             if isinteger(car.y)
                 # prevent a multi-lane change in a single timestep
                 if abs(yp-car.y) > 1.

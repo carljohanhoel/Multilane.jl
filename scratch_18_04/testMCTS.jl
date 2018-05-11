@@ -160,7 +160,7 @@ sim_problem.throw=true
 
 # for i in 1:N
 i = 1
-rng_seed = i+40000
+rng_seed = i+40001
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 is = set_ego_behavior!(is, ego_acc)
@@ -194,7 +194,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 37.5
+t = 3.00
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 print(hist.action_hist[step])

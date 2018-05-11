@@ -32,7 +32,7 @@ function ACCParam(v0::Float64;
 				  step_v::Float64=1.0,
 				  min_T::Float64=0.5,
 				  max_T::Float64=5.0,
-				  step_T::Float64=0.5,
+				  step_T::Float64=0.5, #ZZZ, possibly change this to 0.0
 				  standard_T::Float64=1.5)
 
 	assert(max_v > min_v)

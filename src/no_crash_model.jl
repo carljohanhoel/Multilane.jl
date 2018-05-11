@@ -388,7 +388,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             dvs[1] = a.acc*dt
             dxs[1] = s.cars[1].vel*dt + a.acc*dt^2/2.
             lcs[1] = a.lane_change
-            dys[1] = a.lane_change*dt
+            dys[1] = a.lane_change*mdp.dmodel.lane_change_rate*dt
             new_ego_behavior = s.cars[1].behavior   #Keep old behavior
         end
 
@@ -402,7 +402,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             dxs[i] = (s.cars[i].vel + dvs[i]/2.)*dt
 
             lcs[i] = gen_lane_change(behavior, mdp.dmodel, s, neighborhood, i)
-            dys[i] = lcs[i] * dt
+            dys[i] = lcs[i] * mdp.dmodel.lane_change_rate * dt
 
         end
 

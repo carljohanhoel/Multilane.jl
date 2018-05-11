@@ -116,7 +116,7 @@ function gen_lane_change(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsMod
 
     lanechange = lanechange_
 
-	return lanechange * dmodel.lane_change_rate
+	return lanechange
 end
 
 #############################################################################

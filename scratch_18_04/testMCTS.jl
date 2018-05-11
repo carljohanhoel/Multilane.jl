@@ -176,7 +176,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=50, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 

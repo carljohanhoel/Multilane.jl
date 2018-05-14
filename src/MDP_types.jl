@@ -131,16 +131,17 @@ end
 struct MLPhysicalState
     x::Float64
     t::Float64
+    ego_behavior::BehaviorModel
     cars::Array{CarPhysicalState,1}
     terminal::Nullable{Any} # Should be Nullable{Symbol}
 end
 const MLObs = MLPhysicalState
 
-MLPhysicalState(s::MLState) = MLPhysicalState(s.x, s.t, CarPhysicalState[CarPhysicalState(cs) for cs in s.cars], s.terminal)
+MLPhysicalState(s::MLState) = MLPhysicalState(s.x, s.t, s.cars[1].behavior, CarPhysicalState[CarPhysicalState(cs) for cs in s.cars], s.terminal)
 
 function ==(a::MLPhysicalState, b::MLPhysicalState)
     if isnull(a.terminal) && isnull(b.terminal) # neither terminal
-        return a.x == b.x && a.t == b.t && a.cars == b.cars
+        return a.x == b.x && a.t == b.t && a.cars == b.cars && a.ego_behavior == b.ego_behavior
     elseif !isnull(a.terminal) && !isnull(b.terminal) # both terminal
         return get(a.terminal) == get(b.terminal)
     else # one is terminal
@@ -149,7 +150,7 @@ function ==(a::MLPhysicalState, b::MLPhysicalState)
 end
 function Base.hash(a::MLPhysicalState, h::UInt64=zero(UInt64))
     if isnull(a.terminal)
-        return hash(a.x, hash(a.t, hash(a.cars,h)))
+        return hash(a.x, hash(a.t, hash(a.ego_behavior, hash(a.cars,h))))
     else
         return hash(get(a.terminal), h)
     end
@@ -158,3 +159,33 @@ end
 MLState(ps::MLPhysicalState, cars::Vector{CarState}) = MLState(ps.x, ps.t, cars, ps.terminal)
 MLState(s::MLState, cars::Vector{CarState}) = MLState(s.x, s.t, cars, s.terminal)
 MLState(x::Float64, t::Float64, cars::Vector{CarState}) = MLState(x, t, cars, nothing)
+
+
+
+# #Some ideas on how to extend to a more general highway scenario, with variable number of lanes, exits, entries etc.
+# #Not used yet.
+# struct MLObservableState
+#     vehicles::MLPhysicalState
+#     road::MLRoadState
+#     plan::MLPlanState
+#     internal::MLInternalState
+# end
+#
+# struct MLRoadState
+#     lane_start::Array{Float64,1} #Vector describing when the different lanes start
+#     lane_stop::Array{Float64,1}
+# end
+#
+# struct MLPLanState
+#     v_desired::Float64
+#     lane_ok_start::Array{Float64,1} #Vector describing when it's ok to start being in a lane
+#     lane_ok_stop::Array{Float64,1} #When can't be in a lane anyore
+# end
+#
+# struct MLInternalState
+#     x::Float64
+#     y::Float64
+#     vel::Float64
+#     lane_change::Float64
+#     behavior::ACCParam
+# end

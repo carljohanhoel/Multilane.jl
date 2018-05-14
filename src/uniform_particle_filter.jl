@@ -39,7 +39,8 @@ end
 
 function most_likely_state(b::BehaviorParticleBelief)
     s = MLState(b.physical, Vector{CarState}(length(b.physical.cars)))
-    for i in 1:length(s.cars)
+    s.cars[1] = CarState(b.physical.cars[1],b.physical.ego_behavior)
+    for i in 2:length(s.cars)
         ml_ind = indmax(weights(b, i))
         behavior = b.particles[i][ml_ind]
         s.cars[i] = CarState(b.physical.cars[i], behavior)
@@ -102,13 +103,13 @@ function cweights_from_particles!(b::BehaviorParticleBelief,
     for sp in particles
         maybe_push_one!(b.particles, b.cweights, p, problem.dmodel.phys_param, b.gen, sp, o)
     end
-   
+
     return b
 end
 
 function maybe_push_one!(particles::Vector{Vector{IDMMOBILBehavior}}, cweights, params, pp, gen, sp, o)
-    isp = 1
-    io = 1
+    isp = 2 #Changed from 1 to remove ego car, which is fully observable
+    io = 2 #Changed from 1 to remove ego car, which is fully observable
     while io <= length(o.cars) && isp <= length(sp.cars)
         co = o.cars[io]
         csp = sp.cars[isp]
@@ -134,7 +135,7 @@ function maybe_push_one!(particles::Vector{Vector{IDMMOBILBehavior}}, cweights, 
             isp += 1
         elseif co.id < csp.id
             io += 1
-        else 
+        else
             @assert co.id > csp.id
             isp += 1
         end
@@ -147,7 +148,7 @@ mutable struct BehaviorParticleUpdater <: Updater
     problem::Nullable{NoCrashProblem}
     nb_sims::Int
     p_resample_noise::Float64
-    resample_noise_factor::Float64 
+    resample_noise_factor::Float64
     params::WeightUpdateParams
     rng::AbstractRNG
 end
@@ -170,7 +171,7 @@ function lv_resample(b::BehaviorParticleBelief, up::BehaviorParticleUpdater)
     samples = Array{MLState}(n)
     nc = length(b.physical.cars)
     for m in 1:n
-        cars = resize!([CarState(first(b.physical.cars), NORMAL)], nc)
+        cars = resize!([CarState(first(b.physical.cars), b.physical.ego_behavior)], nc)
         samples[m] = MLState(b.physical, cars)
     end
     for ci in 2:nc
@@ -214,7 +215,7 @@ function update(up::BehaviorParticleUpdater,
     for i in 1:up.nb_sims
         particles[i] = generate_s(get(up.problem), samples[i], a, up.rng)
     end
-    
+
     cweights_from_particles!(b_new, get(up.problem), o, particles, up.params)
 
     for i in 1:length(o.cars)

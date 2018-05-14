@@ -97,7 +97,8 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
-problem = mdp    #Choose which problem to work with
+# problem = mdp    #Choose which problem to work with
+problem = pomdp
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -148,8 +149,8 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
 
-method = "omniscient"
-# method = "mlmpc"
+# method = "omniscient"
+method = "mlmpc" #Does not work with pomdp
 solver = solvers[method]
 
 sim_problem = deepcopy(problem)
@@ -158,9 +159,9 @@ sim_problem.throw=true
 
 ## Run simulations
 
-N = 25
-for i in 1:N
-#i = 1
+# N = 25
+# for i in 1:N
+i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
@@ -176,7 +177,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -195,12 +196,12 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-#t = 37.5
-#step = convert(Int, t / pp.dt) + 1
-#write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-#print(hist.action_hist[step])
-#inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-## inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+t = 0.0
+step = convert(Int, t / pp.dt) + 1
+write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+print(hist.action_hist[step])
+inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 
 #Produce video
@@ -211,7 +212,7 @@ end
 gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
 write(gifname, frames)
 
-end
+# end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

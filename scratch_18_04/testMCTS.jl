@@ -35,7 +35,7 @@ using D3Trees
 
 
 ##
-DEBUG = true
+DEBUG = true #Debugging is also controlled from debug.jl
 
 #Solver parameters
 # @show N = 1000
@@ -56,7 +56,10 @@ scenario = "continuous_driving"
 ## Problem definition
 if scenario == "continuous_driving"
     cor = 0.75
-    lambda = 1.0
+
+    #Reward
+    lambda = 0.0
+    lane_change_cost = 0.0
 
     nb_lanes = 3
     lane_length = 300.
@@ -66,7 +69,7 @@ if scenario == "continuous_driving"
 
     v_des = 25.0
 
-    rmodel = SpeedReward(v_des = v_des)
+    rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, lambda=lambda)
 elseif scenario == "forced_lane_changes"
     cor = 0.75
     lambda = 1.0
@@ -90,7 +93,7 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
                               lane_terminate=true,
-                              max_dist=10000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (?)
+                              max_dist=10000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
                               vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
                               semantic_actions = true
                              )
@@ -161,7 +164,7 @@ sim_problem.throw=true
 
 # N = 25
 # for i in 1:N
-i = 1
+i = 5
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
@@ -196,12 +199,12 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 0.0
-step = convert(Int, t / pp.dt) + 1
-write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-print(hist.action_hist[step])
-inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+# t = 0.0
+# step = convert(Int, t / pp.dt) + 1
+# write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+# print(hist.action_hist[step])
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+# # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 
 #Produce video

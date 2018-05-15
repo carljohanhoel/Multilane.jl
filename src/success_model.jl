@@ -51,10 +51,11 @@ end
 Simple speed reward
 """
 @with_kw struct SpeedReward <: AbstractMLRewardModel
-    v_des::Float64                  = 33.3 # always positive
+    v_des::Float64                  = 25.0 # always positive
     lane_change_cost::Float64       = 0.0 # always positive
     brake_penalty_thresh::Float64   = 4.0  # always positive (also used when calculating actions space of node)
     target_lane::Int                = typemax(Int) #Not used here. But needed for condition that terminates simulation when target lane is reached (if using a target lane).
+    lambda::Float64                 = 0.0  # always positive
 end
 
 # function reward(p::NoCrashProblem{SpeedReward}, s::MLState, ::MLAction, sp::MLState)
@@ -69,36 +70,45 @@ end
 #     return r
 # end
 
-function reward(mdp::MLMDP{MLState, MLAction, D, SpeedReward},
+function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward} },
           s::MLState,
           ::MLAction,
           sp::MLState) where D<:AbstractMLDynamicsModel
 
     v_ego = sp.cars[1].vel
+    v_set = sp.cars[1].behavior.p_idm.v0
     # r = 1/(1 + ((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)^2)
-    r = 1 - abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+    speed_penalty = abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+    set_speed_penalty = abs((v_set-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+    r = 1 - speed_penalty - set_speed_penalty
 
     if !isinteger(sp.cars[1].y)
         r -= mdp.rmodel.lane_change_cost
     end
+
+    nb_brakes = detect_braking(mdp, s, sp)
+    if nb_brakes > 0
+        r -= mdp.rmodel.lambda
+    end
+
     # r += sp.cars[1].y == 4 ? 1 : 0 #Just for testing
 
     return r
 end
 
-function reward(mdp::MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward},
-          s::MLState,
-          ::MLAction,
-          sp::MLState) where D<:AbstractMLDynamicsModel
-
-    v_ego = sp.cars[1].vel
-    # r = 1/(1 + ((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)^2)
-    r = 1 - abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
-
-    if !isinteger(sp.cars[1].y)
-        r -= mdp.rmodel.lane_change_cost
-    end
-    # r += sp.cars[1].y == 4 ? 1 : 0 #Just for testing
-
-    return r
-end
+# function reward(mdp::MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward},
+#           s::MLState,
+#           ::MLAction,
+#           sp::MLState) where D<:AbstractMLDynamicsModel
+#
+#     v_ego = sp.cars[1].vel
+#     # r = 1/(1 + ((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)^2)
+#     r = 1 - abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+#
+#     if !isinteger(sp.cars[1].y)
+#         r -= mdp.rmodel.lane_change_cost
+#     end
+#     # r += sp.cars[1].y == 4 ? 1 : 0 #Just for testing
+#
+#     return r
+# end

@@ -49,7 +49,7 @@ s = set_ego_behavior!(s, ego_acc)
 #visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
 
-sim = HistoryRecorder(rng=rng, max_steps=100, show_progress=true) # initialize a random number generator
+sim = HistoryRecorder(rng=rng, max_steps=1000, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
 
 println("sim done")
@@ -104,7 +104,7 @@ behaviors = standard_uniform(correlation=0.75)   #Creates behaviors
 dmodel = NoCrashIDMMOBILModel(dmodel, behaviors)   #Changes the behaviors in dmodel to the specified ones
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);
 
-rng = MersenneTwister(6)
+rng = MersenneTwister(8)
 
 initSteps = 150
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps)

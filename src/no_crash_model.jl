@@ -302,9 +302,17 @@ Test whether, if the ego vehicle takes action a, it will always be able to slow 
 """
 function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
     dt = mdp.dmodel.phys_param.dt
-    if a.acc >= max_safe_acc(mdp, s, a.lane_change)   #ZZZ a.acc is real acceleration here, but is controlled with ACC
-        return false
+    #Check if will crash with vehicle in front
+    if a.semantic == 1.0
+        if -mdp.dmodel.phys_param.brake_limit >= max_safe_acc(mdp, s, a.lane_change)   #Changed a.acc to braking limit when using semantic actions in forms of the ACC
+            return false
+        end
+    else
+        if a.acc >= max_safe_acc(mdp, s, a.lane_change)   #a.acc is real acceleration here
+            return false
+        end
     end
+    #Check if will crash with rear vehicle
     # check whether we will go into anyone else's lane so close that they might hit us or we might run into them
     if isinteger(s.cars[1].y) && a.lane_change != 0.0
         l_car = mdp.dmodel.phys_param.l_car
@@ -317,13 +325,14 @@ function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
                 # XXX IS THIS RIGHT??
                 # I think I need a better definition of "safe" here
                 gap = ego.x - car.x - l_car
-                if gap <= 0.0
+                # if gap <= 0.0
+                if gap <= l_car #ZZZ Added a safety distance of one car length
                     return false
                 end
                 n_braking_acc = nullable_max_safe_acc(gap, car.vel, ego.vel, mdp.dmodel.phys_param.brake_limit, dt)
 
-                # if isnull(n_braking_acc) || get(n_braking_acc) < -mdp.dmodel.phys_param.brake_limit
-                if isnull(n_braking_acc) || get(n_braking_acc) < max_accel(mdp.dmodel.behaviors)
+                # if isnull(n_braking_acc) || get(n_braking_acc) < max_accel(mdp.dmodel.behaviors)
+                if isnull(n_braking_acc) || get(n_braking_acc) < -mdp.dmodel.phys_param.brake_limit
                     return false
                 end
             end
@@ -490,23 +499,25 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                                 @show car_j.x + dxs[j]
                                 @show car_i.x + dxs[i]
                                 @show pp.l_car
+                                @show s.t
                             end
                             @if_debug begin
                                 println("Conflict because of noise: front:$i, back:$j")
                                 # Gallium.@enter generate_s(mdp, s, a, dbg_rng)
-                                fname = tempname()*".jld"
+                                # fname = tempname()*".jld"
+                                fname = "./Figs/tmp_dbg.jld"
                                 println("saving debug args to $fname")
                                 # @enter generate_s(mdp, s, a, dbg_rng)
                                 JLD.@save(fname, mdp, s, a, dbg_rng)
                             end
                             if i == 1
                                 if mdp.throw
-                                    error("Car nudged because of crash (ego in front).")
+                                    warn("Car nudged because of crash (ego in front).")
                                 end
                             else
                                 # warn("Car nudged because noise would cause a crash.")
                                 if mdp.throw
-                                    error("Car nudged because of crash.")
+                                    warn("Car nudged because of crash.")
                                 end
                             end
                             dxs[j] = car_i.x + dxs[i] - car_j.x - 1.01*pp.l_car
@@ -560,7 +571,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             # end
             @assert yp >= 1.0 && yp <= pp.nb_lanes
 
-            if xp < 0.0 || xp >= pp.lane_length #Limits maximum distance from ego vehicle before a vehicle is deleted
+            if (xp < 30.0 && car.vel < sp.cars[1].vel) || xp < 0.0 || xp >= pp.lane_length #Limits maximum distance from ego vehicle before a vehicle is deleted
                 push!(exits, i)
             else
                 if i==1

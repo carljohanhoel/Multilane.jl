@@ -25,7 +25,7 @@ function ACCParam(v0::Float64;
 				  a::Float64=1.4,
 				  b::Float64=2.0,
 				  T::Float64=1.5,
-				  s0::Float64=2.0,
+				  s0::Float64=0.0,
 				  del::Float64=4.0,
 				  min_v::Float64=19.44,
 				  max_v::Float64=30.56,

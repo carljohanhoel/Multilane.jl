@@ -312,6 +312,20 @@ function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
             return false
         end
     end
+    if isinteger(s.cars[1].y) && a.lane_change != 0.0 #ZZZ Added additional safety margin of one vehicle length
+        l_car = mdp.dmodel.phys_param.l_car
+        for i in 2:length(s.cars)
+            car = s.cars[i]
+            ego = s.cars[1]
+            if ego.x < car.x - l_car && occupation_overlap(ego.y, a.lane_change, car.y, 0.0)  # ego is behind car
+                gap = car.x - l_car - ego.x
+                # if gap <= 0.0
+                if gap <= l_car #ZZZ Added a safety distance of one car length
+                    return false
+                end
+            end
+        end
+    end
     #Check if will crash with rear vehicle
     # check whether we will go into anyone else's lane so close that they might hit us or we might run into them
     if isinteger(s.cars[1].y) && a.lane_change != 0.0

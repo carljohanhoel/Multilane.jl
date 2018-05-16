@@ -54,7 +54,7 @@ function accel_dist(bmodel::IDMMOBILBehavior, dmodel::AbstractMLDynamicsModel, s
     # @assert acc <= 1.01*bmodel.p_idm.a "Acceleration too high: acc=$acc; idm.a=$(bmodel.p_idm.a)"
 
     @if_debug if ds < 0.0 || !(acc <= 1.01*bmodel.p_idm.a)
-        error("""Bad idm calculation:
+        warn("""Bad idm calculation:
                  ds = $ds
                  acc = $acc
                  bmodel.p_idm.a = $(bmodel.p_idm.a)
@@ -246,7 +246,7 @@ function gen_accel(bmodel::ACCBehavior, dmodel::AbstractMLDynamicsModel, s::MLSt
     # @assert acc <= 1.01*bmodel.p_idm.a "Acceleration too high: acc=$acc; idm.a=$(bmodel.p_idm.a)"
 
     @if_debug if ds < 0.0 || !(acc <= 1.01*bmodel.p_idm.a)
-        error("""Bad idm calculation:
+        warn("""Bad idm calculation:
                  ds = $ds
                  acc = $acc
                  bmodel.p_idm.a = $(bmodel.p_idm.a)

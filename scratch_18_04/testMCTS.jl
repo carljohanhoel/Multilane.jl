@@ -42,7 +42,7 @@ DEBUG = true #Debugging is also controlled from debug.jl
 @show n_iters = 1000 #10000   #C 1000
 @show max_time = Inf
 @show max_depth = 20 #60   #C 20
-@show c_uct = 1.0   #C 5.0
+@show c_uct = 2.0   #C 5.0
 @show k_state = 4.0 #0.2, #C 4.0,
 @show alpha_state = 1/8.0 #0.0, #C 1/8.0,
 # @show val = SimpleSolver()
@@ -162,12 +162,15 @@ sim_problem.throw=true
 
 ## Run simulations
 
-# N = 25
-# for i in 1:N
-i = 5
+N = 25
+for i in 1:N
+i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
+# is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
+#                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
+#                                 CarState(pp.lane_length/2, 2, pp.v_med, 0.0, Multilane.TIMID, 1)])
 is = set_ego_behavior!(is, ego_acc)
 write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0_i"*string(i)*".png")
 #ZZZ Line below is temp, just to start with simple initial state
@@ -180,7 +183,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -215,7 +218,7 @@ end
 gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
 write(gifname, frames)
 
-# end
+end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

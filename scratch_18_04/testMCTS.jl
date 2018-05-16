@@ -164,7 +164,7 @@ sim_problem.throw=true
 
 N = 25
 for i in 1:N
-i = 1
+# i = 5
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
@@ -183,7 +183,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=60, rng=rng, capture_exception=false, show_progress=true)
 
 ##
 
@@ -202,7 +202,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-# t = 0.0
+# t = 4.5
 # step = convert(Int, t / pp.dt) + 1
 # write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 # print(hist.action_hist[step])

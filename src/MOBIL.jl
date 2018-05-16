@@ -62,10 +62,11 @@ function is_lanechange_dangerous(pp::PhysicalParam, s::MLState, nbhd::Array{Int,
 	dslb = slb-dvlb*dt
 	diff = 0.0 #something >=0--the safety distance
 
-	# return (slf < diff*l_car) || (slb < diff*l_car) || dslb < diff*l_car ||
-	# 			dslf < diff*l_car
-	return (slf < diff+l_car) || (slb < diff+l_car) || dslb < diff+l_car ||
-				dslf < diff+l_car   #ZZZ, changed from * to +.
+	return (slf < diff*l_car) || (slb < diff*l_car) || dslb < diff*l_car ||
+				dslf < diff*l_car
+	# return (slf < diff+l_car) || (slb < diff+l_car) || dslb < diff+l_car ||
+	# 			dslf < diff+l_car   #ZZZ, changed from * to +.
+	# 			# ZZZ No, it was correct from the start. But this temporarily solves problem with collisions
 
 
 end

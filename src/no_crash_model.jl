@@ -567,7 +567,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 if abs(yp-car.y) > 1.
                     yp = car.y + sign(dys[i])
                 end
-            else # car.y is not an integer
+            else # car.y is not an integer   #ZZZ This assumes lane change takes 2 time steps (?)
                 if floor(yp) >= ceil(car.y)
                     yp = ceil(car.y)
                 end
@@ -584,7 +584,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             #     println("a = $a")
             # end
             @assert yp >= 1.0 && yp <= pp.nb_lanes
-
+            #ZZZ Added condition here to get more fast cars. Parameterize.
             if (xp < 30.0 && car.vel < sp.cars[1].vel) || xp < 0.0 || xp >= pp.lane_length #Limits maximum distance from ego vehicle before a vehicle is deleted
                 push!(exits, i)
             else

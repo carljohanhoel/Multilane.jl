@@ -162,9 +162,9 @@ sim_problem.throw=true
 
 ## Run simulations
 
-N = 25
-for i in 1:N
-# i = 5
+# N = 25
+# for i in 1:N
+i = 8
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
@@ -218,7 +218,7 @@ end
 gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
 write(gifname, frames)
 
-end
+# end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

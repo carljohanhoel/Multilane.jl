@@ -301,10 +301,11 @@ end
 Test whether, if the ego vehicle takes action a, it will always be able to slow down fast enough if the car in front slams on his brakes and won't pull in front of another car so close they can't stop
 """
 function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
+#This function is also used by some heuristic policies
     dt = mdp.dmodel.phys_param.dt
     #Check if will crash with vehicle in front
     if a.semantic == 1.0
-        if -mdp.dmodel.phys_param.brake_limit >= max_safe_acc(mdp, s, a.lane_change)   #Changed a.acc to braking limit when using semantic actions in forms of the ACC
+        if -mdp.dmodel.phys_param.brake_limit +1 >= max_safe_acc(mdp, s, a.lane_change)   #ZZZ Changed a.acc to braking limit when using semantic actions in forms of the ACC. +1 because of time delay when using big sampling steps
             return false
         end
     else
@@ -345,9 +346,15 @@ function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
                 end
                 n_braking_acc = nullable_max_safe_acc(gap, car.vel, ego.vel, mdp.dmodel.phys_param.brake_limit, dt)
 
-                # if isnull(n_braking_acc) || get(n_braking_acc) < max_accel(mdp.dmodel.behaviors)
-                if isnull(n_braking_acc) || get(n_braking_acc) < -mdp.dmodel.phys_param.brake_limit
-                    return false
+                if a.semantic == 1.0
+                    if isnull(n_braking_acc) || get(n_braking_acc) < -mdp.dmodel.phys_param.brake_limit+1   #ZZZ Changed the limit to physical limit. +1 because of time delay when using big sampling steps
+                        return false
+                    end
+                else
+                    if isnull(n_braking_acc) || get(n_braking_acc) < max_accel(mdp.dmodel.behaviors)   #ZZZ Changed back here. But I find this line weird. If a lane change is limited to not induce braking more than 3 m/s^2, how can there ever be hard brakings? Will they all be caused by evaluating acc before lane changes?
+                    # if isnull(n_braking_acc) || get(n_braking_acc) < -mdp.dmodel.phys_param.brake_limit   #ZZZ Changed the limit to physical limit
+                        return false
+                    end
                 end
             end
         end

@@ -105,7 +105,7 @@ problem = mdp    #Choose which problem to work with
 
 ## Solver definition
 if scenario == "continuous_driving"
-    rollout_problem = deepcopy(pomdp)
+    rollout_problem = deepcopy(problem)
     rollout_problem.dmodel.semantic_actions = false
     rollout_problem.dmodel.max_dist = Inf
     rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
@@ -153,7 +153,7 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 ## Choice of solver
 
 method = "omniscient"
-# method = "mlmpc" #Does not work with pomdp
+# method = "mlmpc" #Does not work with mdp
 solver = solvers[method]
 
 sim_problem = deepcopy(problem)
@@ -162,9 +162,9 @@ sim_problem.throw=true
 
 ## Run simulations
 
-# N = 25
-# for i in 1:N
-i = 1
+N = 25
+for i in 1:N
+# i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
@@ -183,7 +183,8 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=250, rng=rng, capture_exception=false, show_progress=true)
+hr_ref = HistoryRecorder(max_steps=250, rng=deepcopy(rng), capture_exception=false, show_progress=true)
 
 ##
 
@@ -192,12 +193,17 @@ if sim_problem isa POMDP
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
     hist = simulate(hr, sim_problem, planner, updater, ips, is)
+    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, ips, is)
     # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
 else
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
     hist = simulate(hr, sim_problem, planner, is)
+    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, is)
 end
+
+@show sum(hist.reward_hist)
+@show sum(hist_ref.reward_hist)
 
 
 #Visualization
@@ -218,7 +224,15 @@ end
 gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
 write(gifname, frames)
 
-# end
+#Reference model
+frames = Frames(MIME("image/png"), fps=10/pp.dt)
+@showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
+    push!(frames, visualize(problem, s, r))
+end
+gifname = "./Figs/testMCTS_i"*string(i)*"_ref.ogv"
+write(gifname, frames)
+
+end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

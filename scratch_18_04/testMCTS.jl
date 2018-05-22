@@ -93,7 +93,7 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
                               lane_terminate=true,
-                              max_dist=10000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
+                              max_dist=30000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
                               vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
                               semantic_actions = true
                              )
@@ -183,8 +183,8 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=250, rng=rng, capture_exception=false, show_progress=true)
-hr_ref = HistoryRecorder(max_steps=250, rng=deepcopy(rng), capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
+hr_ref = HistoryRecorder(max_steps=1000, rng=deepcopy(rng), capture_exception=false, show_progress=true)
 
 ##
 
@@ -204,6 +204,8 @@ end
 
 @show sum(hist.reward_hist)
 @show sum(hist_ref.reward_hist)
+@show hist.state_hist[end].x
+@show hist_ref.state_hist[end].x
 
 
 #Visualization

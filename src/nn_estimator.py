@@ -15,13 +15,13 @@ class NNEstimator:
     def estimate_value(self, state):
         # value = 0.0
         [probabilities, value] = self.net.predict(state)
-        return value
+        return np.float64(value)   #Conversion required for julia code. NN outputs array with one element.
 
     def estimate_probabilities(self, state, possible_actions):
         # n_actions = len(possible_actions)
         # probabilities = np.ones(n_actions)*1/n_actions
         [probabilities, value] = self.net.predict(state)
-        return(probabilities)
+        return np.float64(probabilities)   #Float64 required in julia code. NN outputs float32.
 
     def debug_save_input(self, state, possible_actions):
         print("in debug_save_input")

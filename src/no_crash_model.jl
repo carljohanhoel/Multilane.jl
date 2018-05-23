@@ -105,6 +105,10 @@ function NoCrashSemanticActionSpace(mdp::NoCrashProblem)
     return NoCrashSemanticActionSpace(actions, IntSet())
 end
 
+function actions(mdp::NoCrashProblem)
+    return NoCrashSemanticActionSpace(mdp).actions
+end
+
 function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
     acceptable = IntSet()
     if mdp.dmodel.semantic_actions

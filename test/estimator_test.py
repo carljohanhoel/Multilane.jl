@@ -6,7 +6,7 @@ sys.path.append('../src/')
 
 from nn_estimator import NNEstimator
 
-nn = NNEstimator()
+nn = NNEstimator(N_states=2,N_actions=4)
 
 state = np.ones([3,2])
 allowed_actions = [[True, True, False, True],[True, False, False, True],[True, True, True, True]]

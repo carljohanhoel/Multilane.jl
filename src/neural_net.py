@@ -82,6 +82,7 @@ class AGZeroModel:
 
         self.archive_fit_samples = archive_fit_samples
         self.position_archive = []
+        self.replay_memory = []
 
         self.model_name = time.strftime('G%y%m%dT%H%M%S')
         print(self.model_name)
@@ -116,18 +117,18 @@ class AGZeroModel:
         N_inputs = self.N_inputs
         N_outputs = self.N_outputs
 
-        position = Input(shape=(N_inputs,))
-        joint_net = Dense(32, activation='relu')(position)
+        state = Input(shape=(N_inputs,))
+        joint_net = Dense(32, activation='relu')(state)
         joint_net = Dense(32, activation='relu')(joint_net)
 
-        prob = Dense(32, activation='relu')(joint_net)
-        prob = Dense(N_outputs, activation='softmax', name='probabilities')(prob)
+        dist = Dense(32, activation='relu')(joint_net)
+        dist = Dense(N_outputs, activation='softmax', name='probabilities')(dist)
 
         val = Dense(32, activation='relu')(joint_net)
         val = Dense(1, activation='sigmoid', name='value')(val)
 
-        self.model = Model(position, [prob, val])
-        self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'binary_crossentropy'])
+        self.model = Model(state, [dist, val])
+        self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'mean_squared_error'])
         self.model.summary()
 
     def fit_game(self, X_positions, result):
@@ -144,7 +145,7 @@ class AGZeroModel:
             # initial case
             archive_samples = self.position_archive
         # I'm going to some lengths to avoid the potentially overloaded + operator
-        X_fit_samples = list(itertools.chain(X_posres, archive_samples))
+        X_fit_samples = list(itertools.chain(X_posres, archive_samples)) #C Samples are picked in a strange way here. Adds the current samples to the archive.
         X_shuffled = random.sample(X_fit_samples, len(X_fit_samples))
 
         X, y_dist, y_res = [], [], []
@@ -158,9 +159,28 @@ class AGZeroModel:
         if len(X) > 0:
             self.model.train_on_batch(np.array(X), [np.array(y_dist), np.array(y_res)])   #C Backprop
 
-    def predict(self, X_positions):
-        dist, res = self.model.predict(X_positions)
-        res = np.array([r[0] * 2 - 1 for r in res])
+    def update_network(self, states, dists, vals):
+        new_samples = []
+        for i in range(0,len(states)):
+            new_samples.append([states[i],dists[i],vals[i]])
+        self.replay_memory.extend(new_samples)
+
+        if len(self.replay_memory) >= self.archive_fit_samples:
+            archive_samples = random.sample(self.replay_memory, self.batch_size)
+        else:
+            # initial case
+            archive_samples = self.replay_memory
+
+        batch_states, batch_dists, batch_vals = [], [], []
+        for state, dist, val in archive_samples:
+            batch_states.append(state)
+            batch_dists.append(dist)
+            batch_vals.append(float(val) / 2 + 0.5)
+        self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
+
+    def predict(self, states):
+        dist, res = self.model.predict(states)
+        res = np.array([r[0] * 2 - 1 for r in res])   #ZZZ, maps the value to [0,1]
         return [dist, res]
 
     def save(self, snapshot_id):

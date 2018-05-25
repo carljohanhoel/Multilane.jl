@@ -31,6 +31,10 @@ class NNEstimator:
         dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
         return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
 
+    def update_network(self, states, dists, vals):
+        self.net.update_network(states, dists, vals)
+
+
     def debug_save_input(self, state, possible_actions):
         print("in debug_save_input")
         dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + "/Figs/"   #Necessary with absolute path when calling from julia tests

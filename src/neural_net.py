@@ -131,7 +131,7 @@ class AGZeroModel:
         self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'mean_squared_error'])
         self.model.summary()
 
-    def fit_game(self, X_positions, result):
+    def fit_game(self, X_positions, result): #ZZZ not used, just kept for reference as of now
         X_posres = []
         for pos, dist in X_positions:
             X_posres.append((pos, dist, result))
@@ -175,12 +175,12 @@ class AGZeroModel:
         for state, dist, val in archive_samples:
             batch_states.append(state)
             batch_dists.append(dist)
-            batch_vals.append(float(val) / 2 + 0.5)
+            batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
         self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
 
     def predict(self, states):
         dist, res = self.model.predict(states)
-        res = np.array([r[0] * 2 - 1 for r in res])   #ZZZ, maps the value to [0,1]
+        res = np.array([r[0] * 20 - 10 for r in res])   #ZZZ, adjust the mapping of the value
         return [dist, res]
 
     def save(self, snapshot_id):

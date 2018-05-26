@@ -91,7 +91,7 @@ function Base.hash(a::MLState, h::UInt64=zero(UInt64))
     end
 end
 
-function MCTS.convert_state(state::MLState) #ZZZ This is just temporary to make things run, should be properly defined!!!
+function convert_state(state::MLState) #ZZZ This is just temporary to make things run, should be properly defined!!!
     converted_state = zeros(1,20)
     converted_state[1] = state.x
     converted_state[2] = state.t

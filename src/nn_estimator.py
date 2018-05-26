@@ -34,6 +34,13 @@ class NNEstimator:
     def update_network(self, states, dists, vals):
         self.net.update_network(states, dists, vals)
 
+    def save_network(self, name):
+        self.net.save(name)
+
+    def load_network(self, name):
+        self.net.load(name)
+        print("Net loaded: "+name)
+
 
     def debug_save_input(self, state, possible_actions):
         print("in debug_save_input")

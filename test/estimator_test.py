@@ -3,18 +3,18 @@ import numpy as np
 import pickle
 
 sys.path.append('../src/')
-#
-# from nn_estimator import NNEstimator
-#
-# nn = NNEstimator(N_states=3,N_actions=4)
-#
-# state = np.ones([3,3])
-# allowed_actions = [[True, True, False, True],[True, False, False, True],[True, True, True, True]]
-# est_val = nn.estimate_value(state)
-# dist_act = nn.estimate_distribution(state,allowed_actions)
-# print(est_val)
-# print(dist_act)
-# nn.debug_print_n_calls()
+
+from nn_estimator import NNEstimator
+
+nn = NNEstimator(N_states=3,N_actions=4)
+
+state = np.ones([3,3])
+allowed_actions = [[True, True, False, True],[True, False, False, True],[True, True, True, True]]
+est_val = nn.estimate_value(state)
+dist_act = nn.estimate_distribution(state,allowed_actions)
+print(est_val)
+print(dist_act)
+nn.debug_print_n_calls()
 
 
 
@@ -33,3 +33,5 @@ print(dist_act_loaded)
 
 #Training
 nn.update_network(state, dist_act, est_val) #Should be state, mcts_dist, actual_value
+
+nn.save_network("testSave2")

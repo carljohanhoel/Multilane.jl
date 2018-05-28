@@ -12,6 +12,13 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.merge import add
 from keras.optimizers import Adam
 
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.1 #ZZZ Should be correlated with network size
+set_session(tf.Session(config=config))
+
 
 ############################
 # AlphaGo Zero style network

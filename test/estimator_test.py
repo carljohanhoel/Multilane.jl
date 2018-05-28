@@ -34,4 +34,6 @@ print(dist_act_loaded)
 #Training
 nn.update_network(state, dist_act, est_val) #Should be state, mcts_dist, actual_value
 
-nn.save_network("testSave2")
+nn.save_network("../Logs/testSave2")
+
+nn.load_network("../Logs/testSave2")

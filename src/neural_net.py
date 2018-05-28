@@ -88,7 +88,7 @@ class AGZeroModel:
         self.batch_size = batch_size
 
         self.archive_fit_samples = archive_fit_samples
-        self.position_archive = []
+        self.position_archive = [] #deprecated
         self.replay_memory = []
 
         self.model_name = time.strftime('G%y%m%dT%H%M%S')
@@ -192,13 +192,13 @@ class AGZeroModel:
 
     def save(self, snapshot_id):
         self.model.save_weights('%s.weights.h5' % (snapshot_id,))
-        joblib.dump(self.position_archive, '%s.archive.joblib' % (snapshot_id,), compress=5)
+        joblib.dump(self.replay_memory, '%s.archive.joblib' % (snapshot_id,), compress=5)
 
     def load(self, snapshot_id):
         self.model.load_weights('%s.weights.h5' % (snapshot_id,))
 
         pos_fname = '%s.archive.joblib' % (snapshot_id,)
         try:
-            self.position_archive = joblib.load(pos_fname)
+            self.replay_memory = joblib.load(pos_fname)
         except:
             print('Warning: Cannot load position archive %s' % (pos_fname,))

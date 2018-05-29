@@ -84,10 +84,12 @@ class ResNet(object):
 
 
 class AGZeroModel:
-    def __init__(self, N_inputs, N_outputs, batch_size=32, archive_fit_samples=64):
+    def __init__(self, N_inputs, N_outputs, log_path="./", batch_size=32, archive_fit_samples=64):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
+        self.batch_no = 0
+        self.log_path = log_path
 
         self.archive_fit_samples = archive_fit_samples
         self.position_archive = [] #deprecated
@@ -122,7 +124,7 @@ class AGZeroModel:
         self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'binary_crossentropy'])
         self.model.summary()
 
-        # self.tf_callback = TensorBoard(log_dir='../Logs', histogram_freq=0, batch_size=32, write_graph=True,
+        # self.tf_callback = TensorBoard(log_dir='../Logs/tb', histogram_freq=0, batch_size=32, write_graph=True,
         #                                write_grads=False,
         #                                write_images=False, embeddings_freq=0, embeddings_layer_names=None,
         #                                embeddings_metadata=None)
@@ -143,8 +145,14 @@ class AGZeroModel:
         val = Dense(1, activation='sigmoid', name='value')(val)
 
         self.model = Model(state, [dist, val])
-        self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'mean_squared_error'])
+        self.model.compile(Adam(lr=2e-2), loss=['categorical_crossentropy', 'mean_squared_error'], loss_weights=[1,10])   #ZZZ Scaling factor between distribution and value should be set to something reasonable
         self.model.summary()
+
+        self.tf_callback = TensorBoard(log_dir=self.log_path, histogram_freq=0, batch_size=self.batch_size, write_graph=True,
+                                       write_grads=False,
+                                       write_images=False, embeddings_freq=0, embeddings_layer_names=None,
+                                       embeddings_metadata=None)
+        self.tf_callback.set_model(self.model)
 
     def fit_game(self, X_positions, result): #ZZZ not used, just kept for reference as of now
         X_posres = []
@@ -191,7 +199,11 @@ class AGZeroModel:
             batch_states.append(state)
             batch_dists.append(dist)
             batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
-        self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
+        logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
+
+        nn = ['loss', 'probabilities_loss','value_loss']
+        self.write_log(self.tf_callback, nn, logs, self.batch_no)
+        self.batch_no+=1
 
     def predict(self, states):
         dist, res = self.model.predict(states)
@@ -210,3 +222,12 @@ class AGZeroModel:
             self.replay_memory = joblib.load(pos_fname)
         except:
             print('Warning: Cannot load position archive %s' % (pos_fname,))
+
+    def write_log(self, callback, names, logs, batch_no):
+        for name, value in zip(names, logs):
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value
+            summary_value.tag = name
+            callback.writer.add_summary(summary, batch_no)
+            callback.writer.flush()

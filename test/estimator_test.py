@@ -34,6 +34,10 @@ print(dist_act_loaded)
 #Training
 nn.update_network(state, dist_act, est_val) #Should be state, mcts_dist, actual_value
 
+# TensorBoard(log_dir='../Logs', histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=False, embeddings_freq=0, embeddings_layer_names=None, embeddings_metadata=None)
+
+#Save/load
 nn.save_network("../Logs/testSave2")
+nn.save_network("../Logs/testDir/testSave2")
 
 nn.load_network("../Logs/testSave2")

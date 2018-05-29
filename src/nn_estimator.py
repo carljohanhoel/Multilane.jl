@@ -35,6 +35,9 @@ class NNEstimator:
         self.net.update_network(states, dists, vals)
 
     def save_network(self, name):
+        directory = os.path.dirname(name)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         self.net.save(name)
 
     def load_network(self, name):

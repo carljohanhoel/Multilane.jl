@@ -15,6 +15,8 @@ from keras.optimizers import Adam
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 
+from keras.callbacks import TensorBoard
+
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.1 #ZZZ Should be correlated with network size
 set_session(tf.Session(config=config))
@@ -119,6 +121,12 @@ class AGZeroModel:
         self.model = Model(position, [dist, res])
         self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'binary_crossentropy'])
         self.model.summary()
+
+        # self.tf_callback = TensorBoard(log_dir='../Logs', histogram_freq=0, batch_size=32, write_graph=True,
+        #                                write_grads=False,
+        #                                write_images=False, embeddings_freq=0, embeddings_layer_names=None,
+        #                                embeddings_metadata=None)
+        # self.tf_callback.set_model(self.model)
 
     def create_simple(self):
         N_inputs = self.N_inputs

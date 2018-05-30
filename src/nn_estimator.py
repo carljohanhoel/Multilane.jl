@@ -6,10 +6,12 @@ import pickle
 from neural_net import AGZeroModel
 
 class NNEstimator:
-    def __init__(self, N_states, N_actions, log_path="./"):
+    def __init__(self, N_states, N_actions, replay_memory_max_size, training_start, log_path="./"):
         self.N_states = N_states
         self.N_actions = N_actions
-        self.net = AGZeroModel(self.N_states, self.N_actions, log_path)
+        self.replay_memory_max_size = replay_memory_max_size
+        self.training_start = training_start
+        self.net = AGZeroModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start, log_path)
         self.net.create_simple()
         self.n_val_calls = 0
         self.n_prob_calls = 0

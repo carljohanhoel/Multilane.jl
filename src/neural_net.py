@@ -84,16 +84,21 @@ class ResNet(object):
 
 
 class AGZeroModel:
-    def __init__(self, N_inputs, N_outputs, log_path="./", batch_size=32, archive_fit_samples=64):
+    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
         self.batch_no = 0
         self.log_path = log_path
 
-        self.archive_fit_samples = archive_fit_samples
+        self.archive_fit_samples = 64 #deprecated(?)
         self.position_archive = [] #deprecated
-        self.replay_memory = []
+        # self.replay_memory = []
+        self.replay_memory = [None]*replay_memory_max_size
+        self.replay_memory_max_size = replay_memory_max_size
+        self.replay_memory_write_idx = 0
+        self.replay_memory_size = 0
+        self.training_start = training_start
 
         self.model_name = time.strftime('G%y%m%dT%H%M%S')
         print(self.model_name)
@@ -123,12 +128,6 @@ class AGZeroModel:
         self.model = Model(position, [dist, res])
         self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'binary_crossentropy'])
         self.model.summary()
-
-        # self.tf_callback = TensorBoard(log_dir='../Logs/tb', histogram_freq=0, batch_size=32, write_graph=True,
-        #                                write_grads=False,
-        #                                write_images=False, embeddings_freq=0, embeddings_layer_names=None,
-        #                                embeddings_metadata=None)
-        # self.tf_callback.set_model(self.model)
 
     def create_simple(self):
         N_inputs = self.N_inputs
@@ -184,15 +183,28 @@ class AGZeroModel:
 
     def update_network(self, states, dists, vals):
         new_samples = []
-        for i in range(0,len(states)):
+        for i in range(0,len(states)):   #ZZZ This can be done faster
             new_samples.append([states[i],dists[i],vals[i]])
-        self.replay_memory.extend(new_samples)
-
-        if len(self.replay_memory) >= self.archive_fit_samples:
-            archive_samples = random.sample(self.replay_memory, self.batch_size)
+        idx = self.replay_memory_write_idx
+        ns = len(new_samples)
+        if idx + ns <= self.replay_memory_max_size:
+            self.replay_memory[idx:idx+ns-1] = new_samples
+            self.replay_memory_write_idx += ns
         else:
-            # initial case
-            archive_samples = self.replay_memory
+            self.replay_memory[idx:] = new_samples[0:self.replay_memory_max_size-idx]
+            self.replay_memory[0:ns-(self.replay_memory_max_size-idx)] = new_samples[self.replay_memory_max_size-idx:]
+            self.replay_memory_write_idx = ns-(self.replay_memory_max_size-idx)
+
+        self.replay_memory_size = min(self.replay_memory_max_size, self.replay_memory_size + ns)
+
+
+        if self.replay_memory_size >= self.training_start:
+            if self.replay_memory_size == self.replay_memory_max_size:
+                archive_samples = random.sample(self.replay_memory, self.batch_size)
+            else:
+                archive_samples = random.sample(self.replay_memory[0:self.replay_memory_write_idx-1], self.batch_size)
+        else:
+            return #Do nothing until replay memory is bigger than training start
 
         batch_states, batch_dists, batch_vals = [], [], []
         for state, dist, val in archive_samples:
@@ -201,8 +213,11 @@ class AGZeroModel:
             batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
         logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
 
-        nn = ['loss', 'probabilities_loss','value_loss']
-        self.write_log(self.tf_callback, nn, logs, self.batch_no)
+        #Tensorboard log
+        nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error']
+        data = logs
+        data.append(np.sqrt(logs[2])*20)   #ZZZ Scaling
+        self.write_log(self.tf_callback, nn, data, self.batch_no)
         self.batch_no+=1
 
     def predict(self, states):

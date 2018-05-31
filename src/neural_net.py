@@ -11,6 +11,8 @@ from keras.layers import Activation, BatchNormalization, Dense, Flatten, Input, 
 from keras.layers.convolutional import Conv2D
 from keras.layers.merge import add
 from keras.optimizers import Adam
+from keras.optimizers import sgd
+from keras import regularizers
 
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
@@ -84,7 +86,7 @@ class ResNet(object):
 
 
 class AGZeroModel:
-    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32):
+    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=2e-2):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
@@ -99,6 +101,10 @@ class AGZeroModel:
         self.replay_memory_write_idx = 0
         self.replay_memory_size = 0
         self.training_start = training_start
+
+        self.c = c
+        self.loss_weights = loss_weights
+        self.lr = lr
 
         self.model_name = time.strftime('G%y%m%dT%H%M%S')
         print(self.model_name)
@@ -134,17 +140,18 @@ class AGZeroModel:
         N_outputs = self.N_outputs
 
         state = Input(shape=(N_inputs,))
-        joint_net = Dense(32, activation='relu')(state)
-        joint_net = Dense(32, activation='relu')(joint_net)
+        joint_net = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(state)
+        joint_net = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
 
-        dist = Dense(32, activation='relu')(joint_net)
-        dist = Dense(N_outputs, activation='softmax', name='probabilities')(dist)
+        dist = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        dist = Dense(N_outputs, activation='softmax', name='probabilities', kernel_regularizer=regularizers.l2(self.c))(dist)
 
-        val = Dense(32, activation='relu')(joint_net)
-        val = Dense(1, activation='sigmoid', name='value')(val)
+        val = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        val = Dense(1, activation='sigmoid', name='value', kernel_regularizer=regularizers.l2(self.c))(val)
 
         self.model = Model(state, [dist, val])
-        self.model.compile(Adam(lr=2e-2), loss=['categorical_crossentropy', 'mean_squared_error'], loss_weights=[1,10])   #ZZZ Scaling factor between distribution and value should be set to something reasonable
+        optimizer = sgd(lr=0.01, decay=0, momentum=0.9, nesterov=True)
+        self.model.compile(optimizer=optimizer, loss=['categorical_crossentropy', 'mean_squared_error'], loss_weights=self.loss_weights)
         self.model.summary()
 
         self.tf_callback = TensorBoard(log_dir=self.log_path, histogram_freq=0, batch_size=self.batch_size, write_graph=True,

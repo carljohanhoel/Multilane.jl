@@ -3,34 +3,37 @@ import os
 import numpy as np
 import pickle
 
-from neural_net import AGZeroModel
+# from neural_net import AGZeroModel
+from queueing import GoModel
 
 class NNEstimator:
-    def __init__(self, N_states, N_actions, replay_memory_max_size, training_start, log_path="./"):
+    def __init__(self, N_states, N_actions, replay_memory_max_size, training_start, log_path="./", load_network=None):
         self.N_states = N_states
         self.N_actions = N_actions
         self.replay_memory_max_size = replay_memory_max_size
         self.training_start = training_start
-        self.net = AGZeroModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start, log_path)
-        self.net.create_simple()
+        # self.net = AGZeroModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start, log_path)
+        # self.net.create_simple()
         self.n_val_calls = 0
         self.n_prob_calls = 0
+        self.net = GoModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start,
+                               log_path, load_snapshot=load_network)
 
     def estimate_value(self, state):
         # value = 0.0
         self.n_val_calls+=1
-        [probabilities, value] = self.net.predict(state)
+        value = self.net.predict_value(state)
         return np.float64(value)   #Conversion required for julia code. NN outputs array with one element.
 
     def estimate_distribution(self, state, allowed_actions):
         # n_actions = len(possible_actions)
         # probabilities = np.ones(n_actions)*1/n_actions
         self.n_prob_calls+=1
-        [dist, value] = self.net.predict(state)
+        dist = self.net.predict_distribution(state)
 
         dist = dist*allowed_actions
-        sum_dist = np.sum(dist,axis=1)
-        dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
+        sum_dist = np.sum(dist)
+        dist = dist/sum_dist
         return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
 
     def update_network(self, states, dists, vals):
@@ -42,9 +45,12 @@ class NNEstimator:
             os.makedirs(directory)
         self.net.save(name)
 
-    def load_network(self, name):
-        self.net.load(name)
-        print("Net loaded: "+name)
+    # def load_network(self, name):
+    #     self.net.load(name)
+    #     print("Net loaded: "+name)
+
+    def terminate(self):
+        self.net.terminate()
 
 
     def debug_save_input(self, state, possible_actions):

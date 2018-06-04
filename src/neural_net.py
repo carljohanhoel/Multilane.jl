@@ -195,7 +195,7 @@ class AGZeroModel:
         idx = self.replay_memory_write_idx
         ns = len(new_samples)
         if idx + ns <= self.replay_memory_max_size:
-            self.replay_memory[idx:idx+ns-1] = new_samples
+            self.replay_memory[idx:idx+ns] = new_samples
             self.replay_memory_write_idx += ns
         else:
             self.replay_memory[idx:] = new_samples[0:self.replay_memory_max_size-idx]
@@ -206,11 +206,13 @@ class AGZeroModel:
 
 
         if self.replay_memory_size >= self.training_start:
+            # print("Do one training run\n")
             if self.replay_memory_size == self.replay_memory_max_size:
                 archive_samples = random.sample(self.replay_memory, self.batch_size)
             else:
                 archive_samples = random.sample(self.replay_memory[0:self.replay_memory_write_idx-1], self.batch_size)
         else:
+            # print("Replay memory too small, wait with updating\n")
             return #Do nothing until replay memory is bigger than training start
 
         batch_states, batch_dists, batch_vals = [], [], []
@@ -218,7 +220,15 @@ class AGZeroModel:
             batch_states.append(state)
             batch_dists.append(dist)
             batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
+
+        # print("print training set")
+        # print(batch_states)
+        # print(batch_dists)
+        # print(batch_vals)
+        # print("Call TF training")
         logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
+
+        # print("Write tensorboard log")
 
         #Tensorboard log
         nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error']
@@ -226,6 +236,8 @@ class AGZeroModel:
         data.append(np.sqrt(logs[2])*20)   #ZZZ Scaling
         self.write_log(self.tf_callback, nn, data, self.batch_no)
         self.batch_no+=1
+
+        # print("Update done\n")
 
     def predict(self, states):
         dist, res = self.model.predict(states)

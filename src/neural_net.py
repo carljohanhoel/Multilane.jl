@@ -103,7 +103,7 @@ class AGZeroModel:
         self.training_start = training_start
 
         self.c = c
-        self.loss_weights = loss_weights
+        self.loss_weights = loss_weights   #ZZZZZZZZZZZZZZZZZ think through how to balance these
         self.lr = lr
 
         self.model_name = time.strftime('G%y%m%dT%H%M%S')

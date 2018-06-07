@@ -63,7 +63,7 @@ class ModelServer(Process):
                     stash.trigger = args['stash_size']
                 elif cmd == 'update_network':
                     stash.process()   #C This empties the queue of forward passes before updating the NN
-                    print('\rUpdate %d...' % (update_counter,), end='')
+                    # print('\rUpdate %d...' % (update_counter,), end='')
                     sys.stdout.flush()
                     update_counter += 1
                     # print("updating")
@@ -97,7 +97,7 @@ class GoModel(object):
 
     def update_network(self, states, dists, vals):   #C Training of NN
         # print("in queing, update network")
-        print(self.ri)
+        # print(self.ri)
 
         self.cmd_queue.put(('update_network', {'states': states, 'dists': dists, 'vals': vals}, self.ri))  # C Do the backprop step
         # print("put in queue")

@@ -39,10 +39,20 @@ class NNEstimator:
                 print("error, no allowed actions")
         if any(np.sum(dist,axis=1)==0):
             print("error, sum dist = 0")
+        if np.isnan(dist).any():
+            print("dist nan\n")
+            print(state)
 
         dist = dist*allowed_actions
         sum_dist = np.sum(dist,axis=1)
-        dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
+        if any(sum_dist==0):   #Before the network is trained, the only allowed actions could get prob 0. In that case, set equal prior prob.
+            print("error, sum allowed dist = 0")
+            add_dist = ((dist*0+1) * (sum_dist == 0.)[:,np.newaxis])*allowed_actions
+            dist += add_dist
+            sum_dist += np.sum(add_dist,axis=1)
+
+        # dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
+        dist = dist/sum_dist[:,np.newaxis]
         return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
 
     def add_samples_to_memory(self, states, dists, vals):

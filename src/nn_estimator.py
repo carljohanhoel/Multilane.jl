@@ -28,13 +28,28 @@ class NNEstimator:
         self.n_prob_calls+=1
         [dist, value] = self.net.predict(state)
 
+        #DEBUG
+        if len(np.asarray(allowed_actions).shape) == 1: #just one state
+            n_allowed_actions = np.sum(np.asarray(allowed_actions) * 1)
+            if not n_allowed_actions:
+                print("error, no allowed actions")
+        else:
+            n_allowed_actions = np.sum(np.asarray(allowed_actions)*1,axis=1)
+            if not all(n_allowed_actions):
+                print("error, no allowed actions")
+        if any(np.sum(dist,axis=1)==0):
+            print("error, sum dist = 0")
+
         dist = dist*allowed_actions
         sum_dist = np.sum(dist,axis=1)
         dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
         return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
 
-    def update_network(self, states, dists, vals):
-        self.net.update_network(states, dists, vals)
+    def add_samples_to_memory(self, states, dists, vals):
+        self.net.add_samples_to_memory(states, dists, vals)
+
+    def update_network(self):
+        self.net.update_network()
 
     def save_network(self, name):
         directory = os.path.dirname(name)

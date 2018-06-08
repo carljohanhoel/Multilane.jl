@@ -10,9 +10,10 @@ from nn_estimator import NNEstimator
 nn = NNEstimator(N_states=3,N_actions=4, replay_memory_max_size=55, training_start=40, log_path='../Logs/' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 state = np.ones([20,3])
-allowed_actions = [[True, True, False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True]]
+allowed_actions = [[True, True, False, True],[True, False, False, True],[True, True, True, True],[False, False, False, False],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True]]
+np.asarray(allowed_actions)*1
 # state = np.array([[1., 1., 1.]])
-# allowed_actions = [[True,True,True,True]]
+# allowed_actions = [[1.0, 1.0, 0.0, 1.0]]
 train_dist = np.ones([20,4])*0.5
 train_val = np.array([5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., ])
 est_val = nn.estimate_value(state)
@@ -37,8 +38,10 @@ print(dist_act_loaded)
 
 
 #Training
-for i in range (1,100):
-   nn.update_network(state, train_dist, train_val) #Should be state, mcts_dist, actual_value
+for i in range(0,5):
+    nn.add_samples_to_memory(state, train_dist, train_val) #Should be state, mcts_dist, actual_value
+    for i in range (0,5):
+        nn.update_network()
 
 #Save/load
 nn.save_network("../Logs/testSave2")

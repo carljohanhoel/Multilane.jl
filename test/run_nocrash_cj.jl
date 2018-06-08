@@ -44,7 +44,7 @@ policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane ch
 
 initSteps = 1000
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
-s = set_ego_behavior!(s, ego_acc)
+is = set_ego_behavior(s, ego_acc)
 # @show s.cars[1]
 #visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")

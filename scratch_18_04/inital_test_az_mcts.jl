@@ -65,6 +65,7 @@ if scenario == "continuous_driving"
     lane_length = 300.
     nb_cars = 20
 
+
     initSteps = 1000
 
     v_des = 25.0
@@ -95,6 +96,7 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               lane_terminate=true,
                               max_dist=30000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
                               vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
+                              init_state_steps = initSteps,
                               semantic_actions = true
                              )
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
@@ -127,6 +129,45 @@ dpws = DPWSolver(depth=max_depth,
                  tree_in_info = DEBUG
                 )
 
+
+n_iter = 1000
+depth = 20 #ZZZ not used?
+c_puct = 10.
+# replay_memory_max_size = 55
+# training_start = 40
+# training_steps = 100
+# save_freq = 20
+# eval_freq = 20
+# eval_eps = 3
+replay_memory_max_size = 3000
+training_start = 1000
+training_steps = 10000
+save_freq = 1000
+eval_freq = 1000
+eval_eps = 10
+rng = MersenneTwister(13)
+
+some_state = initial_state(problem, initSteps=0)
+n_s = length(MCTS.convert_state(some_state))   #ZZZZZZZZZZZZZZ convert_staste is not properrly implemented yet!!!
+n_a = n_actions(problem)
+estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/nn_estimator"
+log_name = length(ARGS)>0 ? ARGS[1] : ""
+log_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"*Dates.format(Dates.now(), "yymmdd_HHMMSS_")*log_name
+estimator = NNEstimator(rng, estimator_path, log_path, n_s, n_a, replay_memory_max_size, training_start)
+
+azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
+               k_state=3.,
+               tree_in_info=true,
+               alpha_state=0.2,
+               enable_action_pw=false,
+               check_repeat_state=false,
+               rng=rng,
+               estimate_value=estimator,
+               init_P=estimator,
+               noise_dirichlet = 4,
+               noise_eps = 0.25
+               )
+
 solvers = Dict{String, Solver}(
     "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
     "omniscient" => dpws,
@@ -154,7 +195,8 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 method = "omniscient"
 # method = "mlmpc" #Does not work with mdp
-solver = solvers[method]
+# solver = solvers[method]
+solver = azs
 
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
@@ -183,8 +225,15 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
-hr_ref = HistoryRecorder(max_steps=1000, rng=deepcopy(rng), capture_exception=false, show_progress=true)
+# hr = HistoryRecorder(max_steps=20, rng=rng, capture_exception=false, show_progress=true)
+# hr_ref = HistoryRecorder(max_steps=20, rng=deepcopy(rng), capture_exception=false, show_progress=true)
+
+hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=false)
+
+policy = solve(solver,sim_problem)
+trainer = Trainer(rng=rng, training_steps=training_steps, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, show_progress=true, log_dir=log_path)
+train(trainer, hr, mdp, policy)
+
 
 ##
 
@@ -210,12 +259,12 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-# t = 4.5
-# step = convert(Int, t / pp.dt) + 1
-# write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-# print(hist.action_hist[step])
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+t = 0.0
+step = convert(Int, t / pp.dt) + 1
+write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+print(hist.action_hist[step])
+inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 
 #Produce video

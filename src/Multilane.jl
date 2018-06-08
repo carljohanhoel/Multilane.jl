@@ -11,7 +11,7 @@ import POMDPs: update, initialize_belief
 import POMDPs: generate_s, generate_sr, initial_state, generate_o, generate_sor
 
 using MCTS
-import MCTS: convert_state
+import MCTS: convert_state, n_actions
 
 import Distributions: Dirichlet, Exponential, Gamma, rand
 import Distributions
@@ -136,7 +136,7 @@ export #data structure stuff
     sbatch_spawn,
     gather_results,
     relaxed_initial_state,
-    set_ego_behavior!,
+    set_ego_behavior,
     nan,
     state
 

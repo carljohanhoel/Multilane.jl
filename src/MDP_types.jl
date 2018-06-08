@@ -91,6 +91,14 @@ function Base.hash(a::MLState, h::UInt64=zero(UInt64))
     end
 end
 
+function convert_state(state::Vector{Multilane.MLState})
+    n = length(state)
+    converted_state = Array{Float64}(n,20)
+    for i in 1:n
+        converted_state[i,:] = convert_state(state[i])
+    end
+    return converted_state
+end
 function convert_state(state::MLState) #ZZZ This is just temporary to make things run, should be properly defined!!!
     converted_state = zeros(1,20)
     converted_state[1] = state.x

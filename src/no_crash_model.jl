@@ -31,6 +31,7 @@ mutable struct NoCrashIDMMOBILModel{G<:BehaviorGenerator} <: AbstractMLDynamicsM
     max_dist::Float64 # terminate simulation if distance becomes greater than this
     speed_terminate_thresh::Float64 # terminate simulation if any speed is below this
 
+    init_state_steps::Int #Steps taken from random init state to create new init state
     semantic_actions::Bool # if true, use semantic actions for longitudinal movement
 end
 
@@ -46,7 +47,8 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
                                                  enumerate(Iterators.product(["cautious","normal","aggressive"],
                                                         [pp.v_slow+0.5;pp.v_med;pp.v_fast],
                                                         [pp.l_car]))], Weights(ones(9))),
-                               semantic_actions = true
+                              init_state_steps = 1000,
+                              semantic_actions = true
                               )
 
     return NoCrashIDMMOBILModel(
@@ -62,6 +64,7 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
         brake_terminate_thresh,
         max_dist,
         speed_terminate_thresh,
+        init_state_steps,
         semantic_actions
     )
 end
@@ -93,6 +96,10 @@ end
 const NB_NORMAL_ACTIONS = 9
 
 const NB_SEMANTIC_ACTIONS = 5
+
+function n_actions(mdp::NoCrashProblem)
+    return NB_SEMANTIC_ACTIONS
+end
 
 function NoCrashActionSpace(mdp::NoCrashProblem)
     accels = (-mdp.dmodel.adjustment_acceleration, 0.0, mdp.dmodel.adjustment_acceleration)
@@ -822,13 +829,20 @@ function initial_state(mdp::NoCrashProblem, ps::MLPhysicalState, rng::AbstractRN
     return s
 end
 
-function initial_state(p::NoCrashProblem, rng::AbstractRNG=Base.GLOBAL_RNG; initSteps::Int = 200)
+function initial_state(p::NoCrashProblem, rng::AbstractRNG=Base.GLOBAL_RNG; initSteps::Int = p.dmodel.init_state_steps)
     @if_debug println("debugging")
     mdp = NoCrashMDP{typeof(p.rmodel), typeof(p.dmodel.behaviors)}(p.dmodel, p.rmodel, p.discount, p.throw) # make sure an MDP
-    return relaxed_initial_state(mdp, initSteps, rng)
+    is = relaxed_initial_state(mdp, initSteps, rng)
+    ego_acc = ACCBehavior(ACCParam(p.dmodel.phys_param.v_nominal), 1)
+    is = set_ego_behavior(is, ego_acc)
+    return is
 end
 
-function set_ego_behavior!(s::MLState, ego_behavior::BehaviorModel=NORMAL)
+function MCTS.initial_eval_state(p::NoCrashProblem, rng::AbstractRNG)
+    return initial_state(p,rng)
+end
+
+function set_ego_behavior(s::MLState, ego_behavior::BehaviorModel=NORMAL)
     nb_cars = length(s.cars)
     ego_car = s.cars[1]
     cars = Array{CarState}(0)
@@ -836,7 +850,7 @@ function set_ego_behavior!(s::MLState, ego_behavior::BehaviorModel=NORMAL)
     for i=2:nb_cars
         push!(cars, s.cars[i])
     end
-    return MLState(s.x, s.t, cars)
+    s = MLState(s.x, s.t, cars)
 end
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)

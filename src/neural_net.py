@@ -188,14 +188,17 @@ class AGZeroModel:
         if len(X) > 0:
             self.model.train_on_batch(np.array(X), [np.array(y_dist), np.array(y_res)])   #C Backprop
 
-    def update_network(self, states, dists, vals):
+    def add_samples_to_memory(self, states, dists, vals):
+        assert not (states == None).any(), print("none state present\n" + str(states))
+        assert not (dists == None).any(), print("none dist present\n" + str(dists))
+        assert not (vals == None).any(), print("none val present\n" + str(vals))
         new_samples = []
         for i in range(0,len(states)):   #ZZZ This can be done faster
             new_samples.append([states[i],dists[i],vals[i]])
         idx = self.replay_memory_write_idx
         ns = len(new_samples)
         if idx + ns <= self.replay_memory_max_size:
-            self.replay_memory[idx:idx+ns-1] = new_samples
+            self.replay_memory[idx:idx+ns] = new_samples
             self.replay_memory_write_idx += ns
         else:
             self.replay_memory[idx:] = new_samples[0:self.replay_memory_max_size-idx]
@@ -203,8 +206,9 @@ class AGZeroModel:
             self.replay_memory_write_idx = ns-(self.replay_memory_max_size-idx)
 
         self.replay_memory_size = min(self.replay_memory_max_size, self.replay_memory_size + ns)
+        assert (self.replay_memory_max_size == len(self.replay_memory)), "replay memory grew out of bounds"
 
-
+    def update_network(self):
         if self.replay_memory_size >= self.training_start:
             if self.replay_memory_size == self.replay_memory_max_size:
                 archive_samples = random.sample(self.replay_memory, self.batch_size)

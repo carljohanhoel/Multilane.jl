@@ -110,7 +110,7 @@ i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
-is = set_ego_behavior!(is, ego_acc)
+is = set_ego_behavior(is, ego_acc)
 write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0_i"*string(i)*".png")
 ips = MLPhysicalState(is)
 

@@ -148,7 +148,7 @@ eval_eps = 10
 rng = MersenneTwister(13)
 
 some_state = initial_state(problem, initSteps=0)
-n_s = length(MCTS.convert_state(some_state))   #ZZZZZZZZZZZZZZ convert_staste is not properrly implemented yet!!!
+n_s = length(MCTS.convert_state(some_state,mdp))
 n_a = n_actions(problem)
 estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/nn_estimator"
 log_name = length(ARGS)>0 ? ARGS[1] : ""

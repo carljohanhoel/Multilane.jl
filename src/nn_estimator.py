@@ -47,6 +47,9 @@ class NNEstimator:
         sum_dist = np.sum(dist,axis=1)
         if any(sum_dist==0):   #Before the network is trained, the only allowed actions could get prob 0. In that case, set equal prior prob.
             print("error, sum allowed dist = 0")
+            print(state)
+            print(dist)
+            print(allowed_actions)
             add_dist = ((dist*0+1) * (sum_dist == 0.)[:,np.newaxis])*allowed_actions
             dist += add_dist
             sum_dist += np.sum(add_dist,axis=1)

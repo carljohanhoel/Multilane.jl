@@ -93,17 +93,34 @@ end
 
 function convert_state(state::Vector{Multilane.MLState})
     n = length(state)
-    converted_state = Array{Float64}(n,20)
+    nb_cars = 20
+    nb_ego_states = 2
+    nb_car_states = 3
+    converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
     for i in 1:n
         converted_state[i,:] = convert_state(state[i])
     end
     return converted_state
 end
 function convert_state(state::MLState) #ZZZ This is just temporary to make things run, should be properly defined!!!
-    converted_state = zeros(1,20)
-    converted_state[1] = state.x
-    converted_state[2] = state.t
-    converted_state[3] = state.cars[1].vel
+    norm_factor = 1.  #ZZZZZZZZZ set values
+    nb_cars = 20
+    nb_ego_states = 2
+    nb_car_states = 3
+    converted_state = zeros(1,nb_ego_states+nb_cars*nb_car_states)
+    converted_state[1] = state.cars[1].y / 10
+    converted_state[2] = state.cars[1].vel / 20
+    for (i,car) in enumerate(state.cars[2:end])
+        converted_state[nb_ego_states+1+3*(i-1)] = car.x / 400
+        converted_state[nb_ego_states+2+3*(i-1)] = (car.y-state.cars[1].y) / 10
+        converted_state[nb_ego_states+3+3*(i-1)] = (car.vel-state.cars[1].vel) / 20
+    end
+    start_empty_vec = nb_ego_states+(length(state.cars)-1)*nb_car_states
+    for j=1:nb_cars-(length(state.cars)-1)
+        converted_state[start_empty_vec+1+3*(j-1)] = -1
+        converted_state[start_empty_vec+2+3*(j-1)] = -1
+        converted_state[start_empty_vec+3+3*(j-1)] = -1
+    end
     return converted_state
 end
 

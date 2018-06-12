@@ -133,17 +133,17 @@ dpws = DPWSolver(depth=max_depth,
 n_iter = 1000
 depth = 20 #ZZZ not used?
 c_puct = 10.
-# replay_memory_max_size = 55
-# training_start = 40
-# training_steps = 100
-# save_freq = 20
-# eval_freq = 20
+# replay_memory_max_size = 150
+# training_start = 50
+# training_steps = 1000
+# save_freq = 200
+# eval_freq = 200
 # eval_eps = 3
-replay_memory_max_size = 3000
+replay_memory_max_size = 10000
 training_start = 1000
-training_steps = 10000
+training_steps = 1000000
 save_freq = 1000
-eval_freq = 1000
+eval_freq = 2000
 eval_eps = 10
 rng = MersenneTwister(13)
 
@@ -236,95 +236,3 @@ train(trainer, hr, mdp, policy)
 
 
 ##
-
-if sim_problem isa POMDP
-    updater = make_updater(cor, sim_problem, rng_seed)
-    planner = deepcopy(solve(solver, sim_problem))
-    srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, updater, ips, is)
-    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, ips, is)
-    # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
-else
-    planner = deepcopy(solve(solver, sim_problem))
-    srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, is)
-    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, is)
-end
-
-@show sum(hist.reward_hist)
-@show sum(hist_ref.reward_hist)
-@show hist.state_hist[end].x
-@show hist_ref.state_hist[end].x
-
-
-#Visualization
-#Set time t used for showing tree. Use video to find interesting situations.
-t = 0.0
-step = convert(Int, t / pp.dt) + 1
-write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-print(hist.action_hist[step])
-inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
-
-
-#Produce video
-frames = Frames(MIME("image/png"), fps=10/pp.dt)
-@showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
-    push!(frames, visualize(problem, s, r))
-end
-gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
-write(gifname, frames)
-
-#Reference model
-frames = Frames(MIME("image/png"), fps=10/pp.dt)
-@showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
-    push!(frames, visualize(problem, s, r))
-end
-gifname = "./Figs/testMCTS_i"*string(i)*"_ref.ogv"
-write(gifname, frames)
-
-# end
-
-# For visualizing rollouts, not used for now. See make_video for more details
-# tree = get(hist.ainfo_hist[1], :tree, nothing)
-# rollouts = make_rollouts(planner, tree)
-# nwr = NodeWithRollouts(POWTreeObsNode(tree, 1), rollouts)
-# push!(frames, visualize(pomdp, is, r, tree=nwr))
-
-
-#----------
-
-
-#
-# success = 100.0*sum(data[:terminal].=="lane")/N
-# brakes = 100.0*sum(data[:nb_brakes].>=1)/N
-# @printf("%% reaching:%5.1f; %% braking:%5.1f\n", success, brakes)
-#
-# @show extrema(data[:distance])
-# @show mean(data[:mean_iterations])
-# @show mean(data[:mean_search_time])
-# @show mean(data[:reward])
-# if minimum(data[:min_speed]) < 15.0
-#     @show minimum(data[:min_speed])
-# end
-#
-# if isempty(alldata)
-#     alldata = data
-# else
-#     alldata = vcat(alldata, data)
-# end
-#
-# datestring = Dates.format(now(), "E_d_u_HH_MM")
-# filename = joinpath("/tmp", "uncor_gap_checkpoint_"*datestring*".csv")
-# println("Writing data to $filename")
-# CSV.write(filename, alldata)
-# # end
-# #     end
-# # end
-#
-# # @show alldata
-#
-# datestring = Dates.format(now(), "E_d_u_HH_MM")
-# filename = Pkg.dir("Multilane", "data", "uncor_gap_"*datestring*".csv")
-# println("Writing data to $filename")
-# CSV.write(filename, alldata)

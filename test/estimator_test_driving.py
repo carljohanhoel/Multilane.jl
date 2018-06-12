@@ -7,9 +7,17 @@ sys.path.append('../src/')
 
 from nn_estimator import NNEstimator
 
-nn = NNEstimator(N_states=20,N_actions=5, replay_memory_max_size=55, training_start=40, log_path='../Logs/' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+nn = NNEstimator(N_states=62,N_actions=5, replay_memory_max_size=55, training_start=40, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
-state = np.ones([20,20])
+# state = np.zeros([1,nn.N_states])
+# state = np.array([list(range(1,63))])
+# state[0,2] = 1
+# state[0,14] = 1
+# state[0,17] = 1
+# nn.net.model.predict(state)
+# tmp = nn.net.tmpModel.predict(state)
+
+state = np.ones([20,nn.N_states])
 allowed_actions = [[True, True, False, True, True],[True, False, False, True, True],[True, True, True, True, True],[False, False, False, False, True],[True, True, True, True, True],[True, True,    False, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, True,    False, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, False, True, False, True],[True, True, True, True, True],[True, True,    False, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, False, False, True, True],[True, True, True, True, True]]
 np.asarray(allowed_actions)*1
 # state = np.zeros([1,20])
@@ -17,7 +25,7 @@ np.asarray(allowed_actions)*1
 # state[0][1] = 38.25
 # state[0][2] = 19.758
 # allowed_actions = [[0.0, 0.0, 0.0, 1.0, 1.0]]
-train_dist = np.ones([20,5])*0.5
+train_dist = np.ones([20,nn.N_actions])*0.5
 train_val = np.array([5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., ])
 est_val = nn.estimate_value(state)
 dist_act = nn.estimate_distribution(state,allowed_actions)

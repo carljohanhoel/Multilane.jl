@@ -200,6 +200,52 @@ class AGZeroModel:
                                        embeddings_metadata=None)
         self.tf_callback.set_model(self.model)
 
+    def create_convnet2(self):
+        N_inputs = self.N_inputs
+        N_outputs = self.N_outputs
+
+        N_vehicles = 20
+        N_inputs_per_vehicle = 3
+        N_conv_filters = 32
+
+        state = Input(shape=(N_inputs,))
+
+        state_ego = Lambda(lambda state : state[:,:2])(state)
+        state_others = Lambda(lambda state: state[:, 2:])(state)
+
+        state_others_reshaped = Reshape((N_vehicles*N_inputs_per_vehicle,1,),input_shape=(N_vehicles*N_inputs_per_vehicle,))(state_others)
+        conv_net = Conv1D(N_conv_filters, N_inputs_per_vehicle, strides=N_inputs_per_vehicle, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(state_others_reshaped)
+        conv_net = BatchNormalization()(conv_net)
+        conv_net = Activation(activation='relu')(conv_net)
+        conv_net2 = Conv1D(N_conv_filters, 1, strides=1, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(conv_net)
+        conv_net2 = BatchNormalization()(conv_net2)
+        conv_net2 = Activation(activation='relu')(conv_net2)
+        pool = MaxPooling1D(pool_size=1, strides=N_conv_filters)(conv_net2)
+        conv_net_out = Reshape((N_conv_filters,),input_shape=(1,N_conv_filters,))(pool)
+
+        merged = concatenate([state_ego, conv_net_out])
+
+        joint_net = Dense(64, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(merged)
+        joint_net = BatchNormalization()(joint_net)
+        joint_net = Activation(activation='relu')(joint_net)
+
+        dist = Dense(16, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        dist = Dense(N_outputs, activation='softmax', name='probabilities', kernel_regularizer=regularizers.l2(self.c))(dist)
+
+        val = Dense(16, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        val = Dense(1, activation='sigmoid', name='value', kernel_regularizer=regularizers.l2(self.c))(val)
+
+        self.model = Model(state, [dist, val])
+        optimizer = sgd(lr=0.01, decay=0, momentum=0.9, nesterov=True)
+        self.model.compile(optimizer=optimizer, loss=['categorical_crossentropy', 'mean_squared_error'], loss_weights=self.loss_weights)
+        self.model.summary()
+
+        self.tf_callback = TensorBoard(log_dir=self.log_path, histogram_freq=0, batch_size=self.batch_size, write_graph=True,
+                                       write_grads=False,
+                                       write_images=False, embeddings_freq=0, embeddings_layer_names=None,
+                                       embeddings_metadata=None)
+        self.tf_callback.set_model(self.model)
+
     def fit_game(self, X_positions, result): #ZZZ not used, just kept for reference as of now
         X_posres = []
         for pos, dist in X_positions:

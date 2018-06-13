@@ -24,7 +24,7 @@ using Images
 ##
 #Set up problem configuration
 nb_lanes = 3
-pp = PhysicalParam(nb_lanes,lane_length=300.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
+pp = PhysicalParam(nb_lanes,lane_length=600.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
 _discount = 1.
 nb_cars=20
 
@@ -33,22 +33,22 @@ behaviors = standard_uniform(correlation=0.75)   #Sets max/min values of IDM and
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp, behaviors=behaviors)   #Sets up simulation model parameters.
 dmodel.max_dist = 100000   #Make svisualization fail if max_dist is set to the default Inf
 mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);   #Sets the mdp, which inherits from POMDPs.jl
-rng = MersenneTwister(14)
+rng = MersenneTwister(38)
 
 v_des = 25.0
 behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
 policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
-# ego_acc = ACCBehavior(ACCParam(v_des), 1)
+ego_acc = ACCBehavior(ACCParam(v_des), 1)
 # policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane changes
 
-initSteps = 1000
+initSteps = 200
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
 is = set_ego_behavior(s, ego_acc)
 # @show s.cars[1]
 #visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
 
-sim = HistoryRecorder(rng=rng, max_steps=1000, show_progress=true) # initialize a random number generator
+sim = HistoryRecorder(rng=rng, max_steps=200, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
 
 println("sim done")

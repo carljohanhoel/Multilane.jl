@@ -691,8 +691,10 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
 
             if margin > 0.0
                 if vel > sp.cars[1].vel
-                    # at back
-                    push!(sp.cars, CarState(0.0, lane, vel, 0.0, behavior, next_id))
+                    if rand(rng) > 0.5   #Half the probability of inserting a fast vehicle
+                        # at back
+                        push!(sp.cars, CarState(0.0, lane, vel, 0.0, behavior, next_id))
+                    end
                 else
                     push!(sp.cars, CarState(pp.lane_length, lane, vel, 0.0, behavior, next_id))
                 end

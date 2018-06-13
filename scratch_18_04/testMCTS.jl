@@ -62,10 +62,10 @@ if scenario == "continuous_driving"
     lane_change_cost = 0.0
 
     nb_lanes = 3
-    lane_length = 300.
+    lane_length = 600.
     nb_cars = 20
 
-    initSteps = 1000
+    initSteps = 200
 
     v_des = 25.0
 
@@ -183,8 +183,8 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :dt=>pp.dt,
                 :cor=>cor
            )
-hr = HistoryRecorder(max_steps=1000, rng=rng, capture_exception=false, show_progress=true)
-hr_ref = HistoryRecorder(max_steps=1000, rng=deepcopy(rng), capture_exception=false, show_progress=true)
+hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=true)
+hr_ref = HistoryRecorder(max_steps=200, rng=deepcopy(rng), capture_exception=false, show_progress=true)
 
 ##
 

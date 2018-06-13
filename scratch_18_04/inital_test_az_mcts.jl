@@ -62,11 +62,11 @@ if scenario == "continuous_driving"
     lane_change_cost = 0.0
 
     nb_lanes = 3
-    lane_length = 300.
+    lane_length = 600.
     nb_cars = 20
 
 
-    initSteps = 1000
+    initSteps = 200
 
     v_des = 25.0
 
@@ -139,11 +139,11 @@ training_steps = 1000
 save_freq = 200
 eval_freq = 200
 eval_eps = 3
-# replay_memory_max_size = 10000
-# training_start = 1000
+# replay_memory_max_size = 25000
+# training_start = 2000
 # training_steps = 1000000
-# save_freq = 1000
-# eval_freq = 2000
+# save_freq = 5000
+# eval_freq = 5000
 # eval_eps = 10
 rng = MersenneTwister(13)
 
@@ -229,7 +229,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
 # hr = HistoryRecorder(max_steps=20, rng=rng, capture_exception=false, show_progress=true)
 # hr_ref = HistoryRecorder(max_steps=20, rng=deepcopy(rng), capture_exception=false, show_progress=true)
 
-hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=false)
+hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=false)
 
 policy = solve(solver,sim_problem)
 trainer = Trainer(rng=rng, rng_eval=rng_eval,  training_steps=training_steps, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)

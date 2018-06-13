@@ -3,6 +3,7 @@ function relaxed_initial_state(mdp::NoCrashProblem, steps=200,
                              solver=BehaviorSolver(NORMAL, true, rng))
 
     mdp = deepcopy(mdp)
+    mdp.dmodel.fix_number_cars = false   #Allow cars to be added to the simulation
     mdp.dmodel.max_dist = Inf
     mdp.dmodel.brake_terminate_thresh = Inf
     mdp.dmodel.lane_terminate = false

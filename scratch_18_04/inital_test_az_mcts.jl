@@ -209,6 +209,7 @@ sim_problem.throw=true
 i = 1
 rng_seed = i+40000
 rng = MersenneTwister(rng_seed)
+rng_eval = MersenneTwister(rng_seed+1)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 # is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
 #                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
@@ -231,7 +232,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
 hr = HistoryRecorder(max_steps=100, rng=rng, capture_exception=false, show_progress=false)
 
 policy = solve(solver,sim_problem)
-trainer = Trainer(rng=rng, training_steps=training_steps, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, show_progress=true, log_dir=log_path)
+trainer = Trainer(rng=rng, rng_eval=rng_eval,  training_steps=training_steps, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
 train(trainer, hr, mdp, policy)
 
 

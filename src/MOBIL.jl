@@ -103,7 +103,7 @@ function get_neighborhood(pp::PhysicalParam,s::Union{MLState,MLObs},idx::Int)
 		pos = car.x
 		lane = car.y
 
-        @assert pos >= 0. # this should never happen
+        # @assert pos >= 0. # this should never happen
 
 		dlane = lane - x.y #NOTE float: convert to int
 		#too distant to be a neighbor

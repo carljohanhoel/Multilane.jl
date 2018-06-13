@@ -44,7 +44,14 @@ for i in range(0,5):
         nn.update_network()
 
 #Save/load
-nn.save_network("../Logs/testSave2")
-nn.save_network("../Logs/testDir/testSave2")
+est_val1 = nn.estimate_value(state)
+dist_act1 = nn.estimate_distribution(state,allowed_actions)
 
+nn.save_network("../Logs/testSave2")
 nn.load_network("../Logs/testSave2")
+
+est_val2 = nn.estimate_value(state)
+dist_act2 = nn.estimate_distribution(state,allowed_actions)
+
+print(est_val1 == est_val2)
+print(dist_act1 == dist_act2)

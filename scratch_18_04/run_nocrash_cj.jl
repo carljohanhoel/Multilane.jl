@@ -36,11 +36,10 @@ mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _disc
 rng = MersenneTwister(14)
 
 v_des = 25.0
-# behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
-# policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
-# behavior = ACCBehavior(ACCParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), 1)
-ego_acc = ACCBehavior(ACCParam(v_des), 1)
-policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane changes
+behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
+# ego_acc = ACCBehavior(ACCParam(v_des), 1)
+# policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane changes
 
 initSteps = 1000
 s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.

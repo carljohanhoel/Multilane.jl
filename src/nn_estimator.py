@@ -12,8 +12,10 @@ class NNEstimator:
         self.replay_memory_max_size = replay_memory_max_size
         self.training_start = training_start
         self.net = AGZeroModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start, log_path)
-        # self.net.create_simple()
-        self.net.create_convnet2()
+        if N_states == 3:   #GridWorld case
+            self.net.create_simple()
+        else:
+            self.net.create_convnet()
         self.n_val_calls = 0
         self.n_prob_calls = 0
 

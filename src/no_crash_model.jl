@@ -33,6 +33,7 @@ mutable struct NoCrashIDMMOBILModel{G<:BehaviorGenerator} <: AbstractMLDynamicsM
 
     init_state_steps::Int #Steps taken from random init state to create new init state
     semantic_actions::Bool # if true, use semantic actions for longitudinal movement
+    fix_number_cars::Bool # if true, no cars are deleted or inserted
 end
 
 function NoCrashIDMMOBILModel(nb_cars::Int,
@@ -48,7 +49,8 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
                                                         [pp.v_slow+0.5;pp.v_med;pp.v_fast],
                                                         [pp.l_car]))], Weights(ones(9))),
                               init_state_steps = 1000,
-                              semantic_actions = true
+                              semantic_actions = true,
+                              fix_number_cars = true
                               )
 
     return NoCrashIDMMOBILModel(
@@ -65,7 +67,8 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
         max_dist,
         speed_terminate_thresh,
         init_state_steps,
-        semantic_actions
+        semantic_actions,
+        fix_number_cars
     )
 end
 
@@ -603,7 +606,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             # end
             @assert yp >= 1.0 && yp <= pp.nb_lanes
             #ZZZ Added condition here to get more fast cars. Parameterize.
-            if (xp < 30.0 && car.vel < sp.cars[1].vel) || xp < 0.0 || xp >= pp.lane_length #Limits maximum distance from ego vehicle before a vehicle is deleted
+            if !mdp.dmodel.fix_number_cars && ((xp < 30.0 && car.vel < sp.cars[1].vel) || xp < 0.0 || xp >= pp.lane_length) #Limits maximum distance from ego vehicle before a vehicle is deleted
                 push!(exits, i)
             else
                 if i==1
@@ -624,7 +627,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         ## Generate new cars ##
         #=====================#
 
-        if nb_cars < mdp.dmodel.nb_cars && rand(rng) <= mdp.dmodel.p_appear
+        if !mdp.dmodel.fix_number_cars && nb_cars < mdp.dmodel.nb_cars && rand(rng) <= mdp.dmodel.p_appear
 
             behavior = rand(rng, mdp.dmodel.behaviors)
             vel = typical_velocity(behavior) + randn(rng)*mdp.dmodel.vel_sigma

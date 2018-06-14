@@ -103,14 +103,19 @@ function convert_state(state::Vector{Multilane.MLState}, mdp::Union{MLMDP,MLPOMD
     return converted_state
 end
 function convert_state(state::MLState, mdp::Union{MLMDP,MLPOMDP}, nb_ego_states::Int, nb_car_states::Int)
-    norm_x = mdp.dmodel.phys_param.lane_length
-    norm_y = mdp.dmodel.phys_param.nb_lanes
+    norm_x = mdp.dmodel.phys_param.lane_length/2
+    norm_y = mdp.dmodel.phys_param.nb_lanes-1
     norm_v = mdp.dmodel.phys_param.v_max - mdp.dmodel.phys_param.v_min
-    norm_v_ego = mdp.dmodel.phys_param.v_max
+    bias_v_ego = (mdp.dmodel.phys_param.v_max + mdp.dmodel.phys_param.v_min)/2
+    norm_v_ego = (mdp.dmodel.phys_param.v_max - mdp.dmodel.phys_param.v_min)/2
+    bias_y_ego = (mdp.dmodel.phys_param.nb_lanes+1)/2
+    norm_y_ego = (mdp.dmodel.phys_param.nb_lanes-1)/2
+
     nb_cars = mdp.dmodel.nb_cars
+
     converted_state = zeros(1,nb_ego_states+nb_cars*nb_car_states)
-    converted_state[1] = state.cars[1].y / norm_y
-    converted_state[2] = state.cars[1].vel / norm_v_ego
+    converted_state[1] = (state.cars[1].y - bias_y_ego) / norm_y_ego
+    converted_state[2] = (state.cars[1].vel - bias_v_ego) / norm_v_ego
     for (i,car) in enumerate(state.cars[2:end])
         converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position
         converted_state[nb_ego_states+2+4*(i-1)] = (car.y-state.cars[1].y) / norm_y   #Relative lateral position

@@ -165,7 +165,7 @@ class AGZeroModel:
         N_outputs = self.N_outputs
 
         N_vehicles = 20
-        N_inputs_per_vehicle = 3
+        N_inputs_per_vehicle = 4
         N_conv_filters = 32
 
         state = Input(shape=(N_inputs,))

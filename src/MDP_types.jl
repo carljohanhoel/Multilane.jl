@@ -95,7 +95,7 @@ function convert_state(state::Vector{Multilane.MLState}, mdp::Union{MLMDP,MLPOMD
     n = length(state)
     nb_cars = mdp.dmodel.nb_cars
     nb_ego_states = 2
-    nb_car_states = 3
+    nb_car_states = 4
     converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
     for i in 1:n
         converted_state[i,:] = convert_state(state[i], mdp, nb_ego_states, nb_car_states)
@@ -103,7 +103,6 @@ function convert_state(state::Vector{Multilane.MLState}, mdp::Union{MLMDP,MLPOMD
     return converted_state
 end
 function convert_state(state::MLState, mdp::Union{MLMDP,MLPOMDP}, nb_ego_states::Int, nb_car_states::Int)
-    norm_factor = 1.  #ZZZZZZZZZ set values
     norm_x = mdp.dmodel.phys_param.lane_length
     norm_y = mdp.dmodel.phys_param.nb_lanes
     norm_v = mdp.dmodel.phys_param.v_max - mdp.dmodel.phys_param.v_min
@@ -113,15 +112,17 @@ function convert_state(state::MLState, mdp::Union{MLMDP,MLPOMDP}, nb_ego_states:
     converted_state[1] = state.cars[1].y / norm_y
     converted_state[2] = state.cars[1].vel / norm_v_ego
     for (i,car) in enumerate(state.cars[2:end])
-        converted_state[nb_ego_states+1+3*(i-1)] = car.x / norm_x
-        converted_state[nb_ego_states+2+3*(i-1)] = (car.y-state.cars[1].y) / norm_y
-        converted_state[nb_ego_states+3+3*(i-1)] = (car.vel-state.cars[1].vel) / norm_v
+        converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position
+        converted_state[nb_ego_states+2+4*(i-1)] = (car.y-state.cars[1].y) / norm_y   #Relative lateral position
+        converted_state[nb_ego_states+3+4*(i-1)] = (car.vel-state.cars[1].vel) / norm_v   #Relative speed
+        converted_state[nb_ego_states+4+4*(i-1)] = car.lane_change   #Lane change direction
     end
     start_empty_vec = nb_ego_states+(length(state.cars)-1)*nb_car_states
     for j=1:nb_cars-(length(state.cars)-1)
-        converted_state[start_empty_vec+1+3*(j-1)] = -1
-        converted_state[start_empty_vec+2+3*(j-1)] = -1
-        converted_state[start_empty_vec+3+3*(j-1)] = -1
+        converted_state[start_empty_vec+1+4*(j-1)] = -1
+        converted_state[start_empty_vec+2+4*(j-1)] = 0
+        converted_state[start_empty_vec+3+4*(j-1)] = -1
+        converted_state[start_empty_vec+4+4*(j-1)] = 0
     end
     return converted_state
 end

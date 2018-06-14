@@ -133,20 +133,20 @@ dpws = DPWSolver(depth=max_depth,
 n_iter = 1000
 depth = 20 #ZZZ not used?
 c_puct = 10.
-# replay_memory_max_size = 150
-# training_start = 50
-# training_steps = 1000
-# n_network_updates_per_episode = 10
-# save_freq = 200
-# eval_freq = 200
-# eval_eps = 3
-replay_memory_max_size = 25000
-training_start = 2000
-training_steps = 1000000
+replay_memory_max_size = 150
+training_start = 50
+training_steps = 1000
 n_network_updates_per_episode = 10
-save_freq = 5000
-eval_freq = 5000
-eval_eps = 10
+save_freq = 200
+eval_freq = 200
+eval_eps = 3
+# replay_memory_max_size = 25000
+# training_start = 2000
+# training_steps = 1000000
+# n_network_updates_per_episode = 10
+# save_freq = 5000
+# eval_freq = 5000
+# eval_eps = 10
 rng = MersenneTwister(13)
 
 some_state = initial_state(problem, initSteps=0)

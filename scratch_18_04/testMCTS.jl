@@ -59,7 +59,7 @@ if scenario == "continuous_driving"
 
     #Reward
     lambda = 0.0
-    lane_change_cost = 0.0
+    lane_change_cost = 1.0
 
     nb_lanes = 3
     lane_length = 600.
@@ -165,7 +165,7 @@ sim_problem.throw=true
 # N = 25
 # for i in 1:N
 i = 1
-rng_seed = i+40000
+rng_seed = i+40001
 rng = MersenneTwister(rng_seed)
 is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 # is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
@@ -210,12 +210,12 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-# t = 4.5
-# step = convert(Int, t / pp.dt) + 1
-# write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-# print(hist.action_hist[step])
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+t = 4.5
+step = convert(Int, t / pp.dt) + 1
+write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+print(hist.action_hist[step])
+inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 
 #Produce video

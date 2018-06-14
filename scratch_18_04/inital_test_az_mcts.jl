@@ -59,7 +59,7 @@ if scenario == "continuous_driving"
 
     #Reward
     lambda = 0.0
-    lane_change_cost = 0.0
+    lane_change_cost = 1.0
 
     nb_lanes = 3
     lane_length = 600.
@@ -133,18 +133,20 @@ dpws = DPWSolver(depth=max_depth,
 n_iter = 1000
 depth = 20 #ZZZ not used?
 c_puct = 10.
-replay_memory_max_size = 150
-training_start = 50
-training_steps = 1000
-save_freq = 200
-eval_freq = 200
-eval_eps = 3
-# replay_memory_max_size = 25000
-# training_start = 2000
-# training_steps = 1000000
-# save_freq = 5000
-# eval_freq = 5000
-# eval_eps = 10
+# replay_memory_max_size = 150
+# training_start = 50
+# training_steps = 1000
+# n_network_updates_per_episode = 10
+# save_freq = 200
+# eval_freq = 200
+# eval_eps = 3
+replay_memory_max_size = 25000
+training_start = 2000
+training_steps = 1000000
+n_network_updates_per_episode = 10
+save_freq = 5000
+eval_freq = 5000
+eval_eps = 10
 rng = MersenneTwister(13)
 
 some_state = initial_state(problem, initSteps=0)
@@ -232,7 +234,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
 hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=false)
 
 policy = solve(solver,sim_problem)
-trainer = Trainer(rng=rng, rng_eval=rng_eval,  training_steps=training_steps, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
 train(trainer, hr, mdp, policy)
 
 

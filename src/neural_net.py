@@ -288,6 +288,7 @@ class AGZeroModel:
 
     def load(self, snapshot_id):
         self.model = load_model('%s.weights.h5' % (snapshot_id,))
+        # self.model.load_weights('%s.weights.h5' % (snapshot_id,))
 
         pos_fname = '%s.archive.joblib' % (snapshot_id,)
         try:

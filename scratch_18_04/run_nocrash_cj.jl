@@ -33,7 +33,7 @@ behaviors = standard_uniform(correlation=0.75)   #Sets max/min values of IDM and
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp, behaviors=behaviors)   #Sets up simulation model parameters.
 dmodel.max_dist = 100000   #Make svisualization fail if max_dist is set to the default Inf
 mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);   #Sets the mdp, which inherits from POMDPs.jl
-rng = MersenneTwister(38)
+rng = MersenneTwister(52)
 
 v_des = 25.0
 behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)

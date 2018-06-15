@@ -100,23 +100,23 @@ const NB_NORMAL_ACTIONS = 9
 
 const NB_SEMANTIC_ACTIONS = 5
 
-function n_actions(mdp::NoCrashProblem)
+function n_actions(p::NoCrashProblem)
     return NB_SEMANTIC_ACTIONS
 end
 
-function NoCrashActionSpace(mdp::NoCrashProblem)
-    accels = (-mdp.dmodel.adjustment_acceleration, 0.0, mdp.dmodel.adjustment_acceleration)
-    lane_changes = (-mdp.dmodel.lane_change_rate, 0.0, mdp.dmodel.lane_change_rate)
+function NoCrashActionSpace(p::NoCrashProblem)
+    accels = (-p.dmodel.adjustment_acceleration, 0.0, p.dmodel.adjustment_acceleration)
+    lane_changes = (-p.dmodel.lane_change_rate, 0.0, p.dmodel.lane_change_rate)
     NORMAL_ACTIONS = MLAction[MLAction(a,l,0.0) for (a,l) in Iterators.product(accels, lane_changes)] # this should be in the problem
     return NoCrashActionSpace(NORMAL_ACTIONS, IntSet(), MLAction()) # note: brake will be calculated later based on the state
 end
-function NoCrashSemanticActionSpace(mdp::NoCrashProblem)
+function NoCrashSemanticActionSpace(p::NoCrashProblem)
     actions = [MLAction(0.0,0.0,1.0),MLAction(-1.0,0.0,1.0),MLAction(+1.0,0.0,1.0),MLAction(0.0,-1.0,1.0),MLAction(0.0,+1.0,1.0)]
     return NoCrashSemanticActionSpace(actions, IntSet())
 end
 
-function actions(mdp::NoCrashProblem)
-    return NoCrashSemanticActionSpace(mdp).actions
+function actions(p::NoCrashProblem)
+    return NoCrashSemanticActionSpace(p).actions
 end
 
 function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})

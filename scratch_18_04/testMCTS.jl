@@ -100,8 +100,8 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
-problem = mdp    #Choose which problem to work with
-# problem = pomdp
+# problem = mdp    #Choose which problem to work with
+problem = pomdp
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -152,8 +152,8 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
 
-method = "omniscient"
-# method = "mlmpc" #Does not work with mdp
+# method = "omniscient"
+method = "mlmpc" #Does not work with mdp
 solver = solvers[method]
 
 sim_problem = deepcopy(problem)

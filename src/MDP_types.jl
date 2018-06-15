@@ -91,50 +91,6 @@ function Base.hash(a::MLState, h::UInt64=zero(UInt64))
     end
 end
 
-function convert_state(state::Vector{Multilane.MLState}, mdp::Union{MLMDP,MLPOMDP})
-    n = length(state)
-    nb_cars = mdp.dmodel.nb_cars
-    nb_ego_states = 2
-    nb_car_states = 4
-    converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
-    for i in 1:n
-        converted_state[i,:] = convert_state(state[i], mdp, nb_ego_states, nb_car_states)
-    end
-    return converted_state
-end
-function convert_state(state::MLState, mdp::Union{MLMDP,MLPOMDP}, nb_ego_states::Int, nb_car_states::Int)
-    norm_x = mdp.dmodel.phys_param.lane_length/2
-    norm_y = mdp.dmodel.phys_param.nb_lanes-1
-    norm_v = mdp.dmodel.phys_param.v_max - mdp.dmodel.phys_param.v_min
-    bias_v_ego = (mdp.dmodel.phys_param.v_max + mdp.dmodel.phys_param.v_min)/2
-    norm_v_ego = (mdp.dmodel.phys_param.v_max - mdp.dmodel.phys_param.v_min)/2
-    bias_y_ego = (mdp.dmodel.phys_param.nb_lanes+1)/2
-    norm_y_ego = (mdp.dmodel.phys_param.nb_lanes-1)/2
-
-    nb_cars = mdp.dmodel.nb_cars
-
-    converted_state = zeros(1,nb_ego_states+nb_cars*nb_car_states)
-    converted_state[1] = (state.cars[1].y - bias_y_ego) / norm_y_ego
-    converted_state[2] = (state.cars[1].vel - bias_v_ego) / norm_v_ego
-    for (i,car) in enumerate(state.cars[2:end])
-        converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position
-        converted_state[nb_ego_states+2+4*(i-1)] = (car.y-state.cars[1].y) / norm_y   #Relative lateral position
-        converted_state[nb_ego_states+3+4*(i-1)] = (car.vel-state.cars[1].vel) / norm_v   #Relative speed
-        converted_state[nb_ego_states+4+4*(i-1)] = car.lane_change   #Lane change direction
-    end
-    start_empty_vec = nb_ego_states+(length(state.cars)-1)*nb_car_states
-    for j=1:nb_cars-(length(state.cars)-1)
-        converted_state[start_empty_vec+1+4*(j-1)] = -1
-        converted_state[start_empty_vec+2+4*(j-1)] = 0
-        converted_state[start_empty_vec+3+4*(j-1)] = -1
-        converted_state[start_empty_vec+4+4*(j-1)] = 0
-    end
-    return converted_state
-end
-function convert_state(state::MLState,mdp::Union{MLMDP,MLPOMDP})
-    return convert_state([state],mdp)
-end
-
 struct MLAction
     acc::Float64
     lane_change::Float64 # ydot
@@ -183,6 +139,8 @@ const MLObs = MLPhysicalState
 
 MLPhysicalState(s::MLState) = MLPhysicalState(s.x, s.t, s.cars[1].behavior, CarPhysicalState[CarPhysicalState(cs) for cs in s.cars], s.terminal)
 
+state_dist(s::MLState) = MLPhysicalState(s)
+
 function ==(a::MLPhysicalState, b::MLPhysicalState)
     if isnull(a.terminal) && isnull(b.terminal) # neither terminal
         return a.x == b.x && a.t == b.t && a.cars == b.cars && a.ego_behavior == b.ego_behavior
@@ -204,6 +162,51 @@ MLState(ps::MLPhysicalState, cars::Vector{CarState}) = MLState(ps.x, ps.t, cars,
 MLState(s::MLState, cars::Vector{CarState}) = MLState(s.x, s.t, cars, s.terminal)
 MLState(x::Float64, t::Float64, cars::Vector{CarState}) = MLState(x, t, cars, nothing)
 
+
+##Convert states for neural network
+convert_state(state::MLState,p::Union{MLMDP,MLPOMDP}) = convert_state([state],p)
+convert_state(state::Vector{MLState}, p::Union{MLMDP,MLPOMDP}) = convert_state(state,p.dmodel)
+
+function convert_state(state::Vector{MLState}, dmodel::AbstractMLDynamicsModel)
+    n = length(state)
+    nb_cars = dmodel.nb_cars
+    nb_ego_states = 2
+    nb_car_states = 4
+    converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
+    for i in 1:n
+        converted_state[i,:] = convert_state(state[i], dmodel, nb_ego_states, nb_car_states)
+    end
+    return converted_state
+end
+function convert_state(state::MLState, dmodel::AbstractMLDynamicsModel, nb_ego_states::Int, nb_car_states::Int)
+    norm_x = dmodel.phys_param.lane_length/2
+    norm_y = dmodel.phys_param.nb_lanes-1
+    norm_v = dmodel.phys_param.v_max - dmodel.phys_param.v_min
+    bias_v_ego = (dmodel.phys_param.v_max + dmodel.phys_param.v_min)/2
+    norm_v_ego = (dmodel.phys_param.v_max - dmodel.phys_param.v_min)/2
+    bias_y_ego = (dmodel.phys_param.nb_lanes+1)/2
+    norm_y_ego = (dmodel.phys_param.nb_lanes-1)/2
+
+    nb_cars = dmodel.nb_cars
+
+    converted_state = zeros(1,nb_ego_states+nb_cars*nb_car_states)
+    converted_state[1] = (state.cars[1].y - bias_y_ego) / norm_y_ego
+    converted_state[2] = (state.cars[1].vel - bias_v_ego) / norm_v_ego
+    for (i,car) in enumerate(state.cars[2:end])
+        converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position
+        converted_state[nb_ego_states+2+4*(i-1)] = (car.y-state.cars[1].y) / norm_y   #Relative lateral position
+        converted_state[nb_ego_states+3+4*(i-1)] = (car.vel-state.cars[1].vel) / norm_v   #Relative speed
+        converted_state[nb_ego_states+4+4*(i-1)] = car.lane_change   #Lane change direction
+    end
+    start_empty_vec = nb_ego_states+(length(state.cars)-1)*nb_car_states
+    for j=1:nb_cars-(length(state.cars)-1)
+        converted_state[start_empty_vec+1+4*(j-1)] = -1
+        converted_state[start_empty_vec+2+4*(j-1)] = 0
+        converted_state[start_empty_vec+3+4*(j-1)] = -1
+        converted_state[start_empty_vec+4+4*(j-1)] = 0
+    end
+    return converted_state
+end
 
 
 # #Some ideas on how to extend to a more general highway scenario, with variable number of lanes, exits, entries etc.

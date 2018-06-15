@@ -102,8 +102,8 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
-problem = mdp    #Choose which problem to work with
-# problem = pomdp
+# problem = mdp    #Choose which problem to work with
+problem = pomdp
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -130,11 +130,11 @@ dpws = DPWSolver(depth=max_depth,
                 )
 
 
-n_iter = 1000
+n_iter = 1000 #ZZZZZZZZZZZZZZZZZZZZZZZ
 depth = 20 #ZZZ not used?
 c_puct = 10.
-replay_memory_max_size = 150
-training_start = 50
+replay_memory_max_size = 500
+training_start = 300
 training_steps = 1000
 n_network_updates_per_episode = 10
 save_freq = 200
@@ -150,7 +150,7 @@ eval_eps = 3
 rng = MersenneTwister(13)
 
 some_state = initial_state(problem, initSteps=0)
-n_s = length(MCTS.convert_state(some_state,mdp))
+n_s = length(MCTS.convert_state(some_state,problem))
 n_a = n_actions(problem)
 estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/nn_estimator"
 log_name = length(ARGS)>0 ? ARGS[1] : ""
@@ -194,11 +194,15 @@ v_des = 25.0
 ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
-
-method = "omniscient"
+if problem isa POMDP
+    solver = MLMPCSolver(azs)
+else
+    solver = azs
+end
 # method = "mlmpc" #Does not work with mdp
 # solver = solvers[method]
-solver = azs
+# solver = azs
+# solver = MLMPCSolver(azs)
 
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
@@ -233,9 +237,19 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
 
 hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=false)
 
-policy = solve(solver,sim_problem)
-trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
-train(trainer, hr, mdp, policy)
+
+if problem isa POMDP
+    updater = make_updater(cor, problem, rng_seed)
+    policy = solve(solver,sim_problem)
+    srand(policy, rng_seed+60000)
+    trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+    train(trainer, hr, problem, policy, updater)
+else
+    policy = solve(solver,sim_problem)
+    srand(policy, rng_seed+60000)
+    trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+    train(trainer, hr, problem, policy) #ZZZ Add updater and initial_state_dist as inputs
+end
 
 
 ##

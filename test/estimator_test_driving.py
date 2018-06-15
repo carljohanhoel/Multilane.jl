@@ -7,7 +7,8 @@ sys.path.append('../src/')
 
 from nn_estimator import NNEstimator
 
-nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=55, training_start=40, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+# nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=55, training_start=40, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 # state = np.zeros([1,nn.N_states])
 # state = np.array([list(range(1,63))])
@@ -17,18 +18,21 @@ nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=55, training_st
 # nn.net.model.predict(state)
 # tmp = nn.net.tmpModel.predict(state)
 
+n_samples = 200
 np.random.seed(1)
-state = np.random.rand(20,nn.N_states)
+state = np.random.rand(n_samples,nn.N_states)
 # state = np.ones([20,nn.N_states])
-allowed_actions = [[True, True, False, True, True],[True, False, False, True, True],[True, True, True, True, True],[False, False, False, False, True],[True, True, True, True, True],[True, True,    False, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, True,    False, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, False, True, False, True],[True, True, True, True, True],[True, True,    False, True, True],[True, False, False, True, True],[True, True, True, True, True],[True, False, False, True, True],[True, True, True, True, True]]
-np.asarray(allowed_actions)*1
+allowed_actions = np.ones([n_samples,nn.N_actions])
+allowed_actions[0]=[1, 0, 0, 1, 0]
+allowed_actions[1]=[1, 0, 0, 0, 0]
+allowed_actions[2]=[0, 1, 1, 1, 1]
 # state = np.zeros([1,20])
 # state[0][0] = 769.604
 # state[0][1] = 38.25
 # state[0][2] = 19.758
 # allowed_actions = [[0.0, 0.0, 0.0, 1.0, 1.0]]
-train_dist = np.ones([20,nn.N_actions])*0.5
-train_val = np.array([5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., 5., ])
+train_dist = np.ones([n_samples,nn.N_actions])*0.5
+train_val = np.ones(n_samples)
 est_val = nn.estimate_value(state)
 dist_act = nn.estimate_distribution(state,allowed_actions)
 print(est_val)

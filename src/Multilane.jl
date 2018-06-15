@@ -11,7 +11,7 @@ import POMDPs: update, initialize_belief
 import POMDPs: generate_s, generate_sr, initial_state, generate_o, generate_sor
 
 using MCTS
-import MCTS: convert_state, n_actions
+import MCTS: convert_state, n_actions, state_dist
 
 import Distributions: Dirichlet, Exponential, Gamma, rand
 import Distributions

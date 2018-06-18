@@ -6,9 +6,11 @@ import pickle
 from neural_net import AGZeroModel
 
 class NNEstimator:
-    def __init__(self, N_states, N_actions, replay_memory_max_size, training_start, log_path="./"):
+    def __init__(self, N_states, N_actions, V_min, V_max, replay_memory_max_size, training_start, log_path="./"):
         self.N_states = N_states
         self.N_actions = N_actions
+        self.V_min = V_min
+        self.V_max = V_max
         self.replay_memory_max_size = replay_memory_max_size
         self.training_start = training_start
         self.net = AGZeroModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start, log_path)
@@ -23,6 +25,7 @@ class NNEstimator:
         # value = 0.0
         self.n_val_calls+=1
         [probabilities, value] = self.net.predict(state)
+        value = value*(self.V_max-self.V_min)+self.V_min
         return np.float64(value)   #Conversion required for julia code. NN outputs array with one element.
 
     def estimate_distribution(self, state, allowed_actions):
@@ -62,6 +65,7 @@ class NNEstimator:
         return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
 
     def add_samples_to_memory(self, states, dists, vals):
+        vals = (vals-self.V_min)/(self.V_max-self.V_min)
         self.net.add_samples_to_memory(states, dists, vals)
 
     def update_network(self):

@@ -35,7 +35,6 @@ using D3Trees
 
 
 ##
-DEBUG = true #Debugging is also controlled from debug.jl
 
 #Solver parameters
 # @show N = 1000
@@ -102,8 +101,8 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
-# problem = mdp    #Choose which problem to work with
-problem = pomdp
+problem = mdp    #Choose which problem to work with
+# problem = pomdp
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -126,40 +125,41 @@ dpws = DPWSolver(depth=max_depth,
                  check_repeat_state=false,
                  estimate_value=RolloutEstimator(rollout_policy),
                  # estimate_value=val
-                 tree_in_info = DEBUG
+                 tree_in_info = false
                 )
 
 
 n_iter = 1000 #ZZZZZZZZZZZZZZZZZZZZZZZ
 depth = 20 #ZZZ not used?
 c_puct = 10.
-replay_memory_max_size = 500
-training_start = 300
-training_steps = 1000
-n_network_updates_per_episode = 10
-save_freq = 200
-eval_freq = 200
-eval_eps = 3
-# replay_memory_max_size = 25000
-# training_start = 2000
-# training_steps = 1000000
+# replay_memory_max_size = 500
+# training_start = 300
+# training_steps = 1000
 # n_network_updates_per_episode = 10
-# save_freq = 5000
-# eval_freq = 5000
-# eval_eps = 10
+# save_freq = 200
+# eval_freq = 200
+# eval_eps = 3
+replay_memory_max_size = 25000
+training_start = 2000
+training_steps = 1000000
+n_network_updates_per_episode = 10
+save_freq = 5000
+eval_freq = 5000
+eval_eps = 10
 rng = MersenneTwister(13)
 
 some_state = initial_state(problem, initSteps=0)
 n_s = length(MCTS.convert_state(some_state,problem))
 n_a = n_actions(problem)
+v_min, v_max = max_min_cum_reward(problem)
 estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/nn_estimator"
 log_name = length(ARGS)>0 ? ARGS[1] : ""
 log_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"*Dates.format(Dates.now(), "yymmdd_HHMMSS_")*log_name
-estimator = NNEstimator(rng, estimator_path, log_path, n_s, n_a, replay_memory_max_size, training_start)
+estimator = NNEstimator(rng, estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
 
 azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
                k_state=3.,
-               tree_in_info=true,
+               tree_in_info=false,
                alpha_state=0.2,
                enable_action_pw=false,
                check_repeat_state=false,

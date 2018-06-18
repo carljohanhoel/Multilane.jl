@@ -8,7 +8,7 @@ sys.path.append('../src/')
 from nn_estimator import NNEstimator
 
 # nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=55, training_start=40, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
-nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+nn = NNEstimator(N_states=82,N_actions=5, V_min = 0, V_max = 20, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 # state = np.zeros([1,nn.N_states])
 # state = np.array([list(range(1,63))])

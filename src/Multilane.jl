@@ -101,7 +101,8 @@ export
     SimpleSolver,
     BehaviorSolver,
     IDMLaneSeekingSolver,
-    OptimisticValue
+    OptimisticValue,
+    max_min_cum_reward
 
 export
     SingleBehaviorSolver,

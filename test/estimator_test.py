@@ -7,7 +7,7 @@ sys.path.append('../src/')
 
 from nn_estimator import NNEstimator
 
-nn = NNEstimator(N_states=3,N_actions=4, replay_memory_max_size=55, training_start=40, log_path='../Logs/' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+nn = NNEstimator(N_states=3,N_actions=4, V_min=-10, V_max=10, replay_memory_max_size=55, training_start=40, log_path='../Logs/' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 state = np.ones([20,3])
 allowed_actions = [[True, True, False, True],[True, False, False, True],[True, True, True, True],[True, False, False, False],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True],[True, True,    False, True],[True, False, False, True],[True, True, True, True],[True, False, False, True],[True, True, True, True]]

@@ -86,7 +86,7 @@ class ResNet(object):
 
 
 class AGZeroModel:
-    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=2e-2):
+    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=1e-2):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
@@ -132,7 +132,7 @@ class AGZeroModel:
         res = Dense(1, activation='sigmoid', name='result')(res)
 
         self.model = Model(position, [dist, res])
-        self.model.compile(Adam(lr=2e-2), ['categorical_crossentropy', 'binary_crossentropy'])
+        self.model.compile(Adam(lr=self.lr), ['categorical_crossentropy', 'binary_crossentropy'])
         self.model.summary()
 
     def create_simple(self):
@@ -150,7 +150,7 @@ class AGZeroModel:
         val = Dense(1, activation='sigmoid', name='value', kernel_regularizer=regularizers.l2(self.c))(val)
 
         self.model = Model(state, [dist, val])
-        optimizer = sgd(lr=0.01, decay=0, momentum=0.9, nesterov=True)
+        optimizer = sgd(lr=self.lr, decay=0, momentum=0.9, nesterov=True)
         self.model.compile(optimizer=optimizer, loss=['categorical_crossentropy', 'mean_squared_error'], loss_weights=self.loss_weights)
         self.model.summary()
 
@@ -196,7 +196,7 @@ class AGZeroModel:
         val = Dense(1, activation='sigmoid', name='value', kernel_regularizer=regularizers.l2(self.c))(val)
 
         self.model = Model(state, [dist, val])
-        optimizer = sgd(lr=0.01, decay=0, momentum=0.9, nesterov=True)
+        optimizer = sgd(lr=self.lr, decay=0, momentum=0.9, nesterov=True)
         self.model.compile(optimizer=optimizer, loss=['categorical_crossentropy', 'mean_squared_error'], loss_weights=self.loss_weights)
         self.model.summary()
 
@@ -267,7 +267,8 @@ class AGZeroModel:
         for state, dist, val in archive_samples:
             batch_states.append(state)
             batch_dists.append(dist)
-            batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
+            #moved to nn_estimator   #batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
+            batch_vals.append(val)
         logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
 
         #Tensorboard log
@@ -279,7 +280,7 @@ class AGZeroModel:
 
     def predict(self, states):
         dist, res = self.model.predict(states)
-        res = np.array([r[0] * 20 - 10 for r in res])   #ZZZ, adjust the mapping of the value
+        #moved to nn_estimator   # res = np.array([r[0] * 20 - 10 for r in res])   #ZZZ, adjust the mapping of the value
         return [dist, res]
 
     def save(self, snapshot_id):

@@ -16,6 +16,7 @@ mutable struct PhysicalParam
     brake_limit::Float64 # always positive
     nb_lanes::Int
 	lane_length::Float64
+    sensor_range::Float64 #Only vehicles within this range will be considered by policy
 end
 
 function PhysicalParam(nb_lanes::Int;dt::Float64=0.75,
@@ -29,13 +30,14 @@ function PhysicalParam(nb_lanes::Int;dt::Float64=0.75,
 						lane_length::Float64=12.,
 						v_max::Float64=v_fast+0.,
 						v_min::Float64=v_slow-0.,
-                        brake_limit::Float64=8. # coefficient of friction of about 0.8
+                        brake_limit::Float64=8., # coefficient of friction of about 0.8
+                        sensor_range::Float64=Inf
                         )
 
 	assert(v_fast >= v_med)
 	assert(v_med >= v_slow)
 	assert(v_fast > v_slow)
-    return PhysicalParam(dt, w_car, l_car, v_nominal, w_lane, v_fast, v_slow, v_med, v_max, v_min, brake_limit, nb_lanes, lane_length)
+    return PhysicalParam(dt, w_car, l_car, v_nominal, w_lane, v_fast, v_slow, v_med, v_max, v_min, brake_limit, nb_lanes, lane_length, sensor_range)
 end
 
 """

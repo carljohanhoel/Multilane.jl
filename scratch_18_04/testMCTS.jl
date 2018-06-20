@@ -64,8 +64,9 @@ if scenario == "continuous_driving"
     nb_lanes = 3
     lane_length = 600.
     nb_cars = 20
+    sensor_range = 200.
 
-    initSteps = 200
+    initSteps = 200   #To create initial random state
 
     v_des = 25.0
 
@@ -88,7 +89,7 @@ end
 @show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
-pp = PhysicalParam(nb_lanes, lane_length=lane_length)
+pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range)
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
@@ -100,7 +101,7 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 
-# problem = mdp    #Choose which problem to work with
+#problem = mdp    #Choose which problem to work with
 problem = pomdp
 
 ## Solver definition
@@ -152,9 +153,15 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
 
+## Choice of solver
+if problem isa POMDP
+    solver = MLMPCSolver(dpws)
+else
+    solver = dpws
+end
 # method = "omniscient"
-method = "mlmpc" #Does not work with mdp
-solver = solvers[method]
+# method = "mlmpc" #Does not work with mdp
+# solver = solvers[method]
 
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
@@ -175,7 +182,8 @@ is = set_ego_behavior(is, ego_acc)
 write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0_i"*string(i)*".png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
-ips = MLPhysicalState(is)
+# ips = MLPhysicalState(is)
+ips = MLPhysicalState(is,problem.dmodel.phys_param.sensor_range)
 
 metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :lambda=>lambda,

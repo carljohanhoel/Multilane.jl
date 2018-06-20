@@ -96,7 +96,7 @@ function get_neighborhood(pp::PhysicalParam,s::Union{MLState,MLObs},idx::Int)
 	end
 
 	for (i,car) in enumerate(s.cars)
-		#i am not a neighbor
+		#Skip ego vehicle
 		if i == idx
 			continue
 		end
@@ -118,6 +118,10 @@ function get_neighborhood(pp::PhysicalParam,s::Union{MLState,MLObs},idx::Int)
 
 		d = pos-x.x
 
+		if idx==1 && abs(d) > pp.sensor_range   #For ego vehicle, ignore vehicles outside sensor range
+			continue
+		end
+
 		offset = d >= 0. ? 2 : 5
 
 		if abs(d) < dists[offset+dlane]
@@ -125,6 +129,7 @@ function get_neighborhood(pp::PhysicalParam,s::Union{MLState,MLObs},idx::Int)
 			nbhd[offset+dlane] = i
 		end
 
+		#If vehicle is overlapping laterally, place in front/behind too
         if occupation_overlap(car.y, x.y) && abs(d) < dists[offset]
             dists[offset] = abs(d)
             nbhd[offset] = i

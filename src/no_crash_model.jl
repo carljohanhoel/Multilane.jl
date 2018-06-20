@@ -588,7 +588,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 if abs(yp-car.y) > 1.
                     yp = car.y + sign(dys[i])
                 end
-            else # car.y is not an integer   #ZZZ This assumes lane change takes 2 time steps (?)
+            else # car.y is not an integer
                 if floor(yp) >= ceil(car.y)
                     yp = ceil(car.y)
                 end
@@ -859,7 +859,7 @@ function set_ego_behavior(s::MLState, ego_behavior::BehaviorModel=NORMAL)
 end
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)
-    return MLObs(sp)
+    return MLObs(sp, mdp.dmodel.phys_param.sensor_range)
 end
 
 function generate_sor(pomdp::NoCrashPOMDP, s::MLState, a::MLAction, rng::AbstractRNG)

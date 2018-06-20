@@ -24,7 +24,7 @@ using Images
 ##
 #Set up problem configuration
 nb_lanes = 3
-pp = PhysicalParam(nb_lanes,lane_length=600.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
+pp = PhysicalParam(nb_lanes,lane_length=600., sensor_range=150.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
 _discount = 1.
 nb_cars=20
 
@@ -33,7 +33,7 @@ behaviors = standard_uniform(correlation=0.75)   #Sets max/min values of IDM and
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp, behaviors=behaviors)   #Sets up simulation model parameters.
 dmodel.max_dist = 100000   #Make svisualization fail if max_dist is set to the default Inf
 mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);   #Sets the mdp, which inherits from POMDPs.jl
-rng = MersenneTwister(52)
+rng = MersenneTwister(56)
 
 v_des = 25.0
 behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)

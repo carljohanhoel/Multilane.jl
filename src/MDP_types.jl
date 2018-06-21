@@ -139,15 +139,25 @@ const MLObs = MLPhysicalState
 
 MLPhysicalState(s::MLState) = MLPhysicalState(s.x, s.t, s.cars[1].behavior, CarPhysicalState[CarPhysicalState(cs) for cs in s.cars], s.terminal)
 
-function MLPhysicalState(s::MLState, sensor_range::Float64)
-    CarPhysicalState[CarPhysicalState(cs) for cs in s.cars]
-    car_physical_inrange = []
-    for car in s.cars
-        if abs(car.x-s.cars[1].x) <= sensor_range
-            push!(car_physical_inrange,CarPhysicalState(car))
+function MLPhysicalState(s::MLState, sensor_range::Float64, observe_behaviors::Bool)
+    if observe_behaviors   #This is not really the physical state, but an omniscient observer with limited range (behaviors included in state, but only vehicles within range)
+        s_limited = []
+        for car in s.cars
+            if abs(car.x-s.cars[1].x) <= sensor_range
+                push!(s_limited,CarState(car))
+            end
         end
+        return MLState(s.x,s.t,s_limited,s.terminal)
+    else
+        CarPhysicalState[CarPhysicalState(cs) for cs in s.cars]
+        car_physical_inrange = []
+        for car in s.cars
+            if abs(car.x-s.cars[1].x) <= sensor_range
+                push!(car_physical_inrange,CarPhysicalState(car))
+            end
+        end
+        return MLPhysicalState(s.x, s.t, s.cars[1].behavior, car_physical_inrange, s.terminal)
     end
-    return MLPhysicalState(s.x, s.t, s.cars[1].behavior, car_physical_inrange, s.terminal)
 end
 
 state_dist(s::MLState) = MLPhysicalState(s)

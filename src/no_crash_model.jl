@@ -78,8 +78,9 @@ end
 
 const NoCrashMDP{R<:AbstractMLRewardModel, G} =  MLMDP{MLState, MLAction, NoCrashIDMMOBILModel{G}, R}
 const NoCrashPOMDP{R<:AbstractMLRewardModel, G} =  MLPOMDP{MLState, MLAction, MLObs, NoCrashIDMMOBILModel{G}, R}
+const NoCrashPOMDP_lr{R<:AbstractMLRewardModel, G} =  MLPOMDP{MLState, MLAction, MLState, NoCrashIDMMOBILModel{G}, R}
 
-const NoCrashProblem{R<:AbstractMLRewardModel,G} =  Union{NoCrashMDP{R,G}, NoCrashPOMDP{R,G}}
+const NoCrashProblem{R<:AbstractMLRewardModel,G} =  Union{NoCrashMDP{R,G}, NoCrashPOMDP{R,G}, NoCrashPOMDP_lr{R,G}}
 
 gen_type(::Type{MLPOMDP{S,A,O,NoCrashIDMMOBILModel{G},R}}) where {S,A,O,G,R} = G
 
@@ -859,7 +860,7 @@ function set_ego_behavior(s::MLState, ego_behavior::BehaviorModel=NORMAL)
 end
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)
-    return MLObs(sp, mdp.dmodel.phys_param.sensor_range)
+    return MLObs(sp, mdp.dmodel.phys_param.sensor_range, mdp.dmodel.phys_param.obs_behaviors)
 end
 
 function generate_sor(pomdp::NoCrashPOMDP, s::MLState, a::MLAction, rng::AbstractRNG)
@@ -868,7 +869,19 @@ function generate_sor(pomdp::NoCrashPOMDP, s::MLState, a::MLAction, rng::Abstrac
     return sp, o, r
 end
 
+function generate_sor(pomdp::NoCrashPOMDP_lr, s::MLState, a::MLAction, rng::AbstractRNG)
+    sp, r = generate_sr(pomdp, s, a, rng)
+    o = generate_o(pomdp, s, a, sp)
+    return sp, o, r
+end
+
 @if_debug function generate_sori(pomdp::NoCrashPOMDP, s::MLState, a::MLAction, rng::AbstractRNG)
+    rngcp = copy(rng)
+    sp, o, r = generate_sor(pomdp, s, a, rng)
+    return sp, o, r, Dict(:rng=>rngcp)
+end
+
+@if_debug function generate_sori(pomdp::NoCrashPOMDP_lr, s::MLState, a::MLAction, rng::AbstractRNG)
     rngcp = copy(rng)
     sp, o, r = generate_sor(pomdp, s, a, rng)
     return sp, o, r, Dict(:rng=>rngcp)

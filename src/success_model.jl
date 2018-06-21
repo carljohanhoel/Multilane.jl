@@ -70,7 +70,7 @@ end
 #     return r
 # end
 
-function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward} },
+function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLState, D, SpeedReward} },
           s::MLState,
           ::MLAction,
           sp::MLState) where D<:AbstractMLDynamicsModel
@@ -96,7 +96,7 @@ function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{ML
     return r
 end
 
-function max_min_cum_reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward} }) where D<:AbstractMLDynamicsModel
+function max_min_cum_reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLState, D, SpeedReward} }) where D<:AbstractMLDynamicsModel
     #Not properly defined, but fine for now
     v_min = 0
     v_max = 1/(1-mdp.discount)

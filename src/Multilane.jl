@@ -88,13 +88,15 @@ export
     QBSolver,
     QMDPWrapper,
     OutcomeMDP,
-    OutcomeSolver
+    OutcomeSolver,
+    LimitedRangeSolver
 
 export
     NoCrashRewardModel,
     NoCrashIDMMOBILModel,
     NoCrashMDP,
     NoCrashPOMDP,
+    NoCrashPOMDP_lr,
     SuccessReward,
     SpeedReward,
     Simple,
@@ -161,7 +163,8 @@ export # POMDP belief stuff
     BehaviorPOWFilter,
     ParticleGenerator,
     param_means,
-    param_stds
+    param_stds,
+    LimitedRangeUpdater
 
 export
     MaxBrakeMetric,
@@ -197,6 +200,7 @@ include("aggressiveness_particle_filter.jl")
 include("uniform_particle_filter.jl")
 include("pow_filter.jl")
 include("most_likely_mpc.jl")
+include("limited_range_mdp.jl")
 include("aggressiveness_belief_mdp.jl")
 include("qmdp.jl")
 include("qbmcts.jl")

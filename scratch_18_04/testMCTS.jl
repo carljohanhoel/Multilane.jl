@@ -40,18 +40,17 @@ DEBUG = true #Debugging is also controlled from debug.jl
 #Solver parameters
 # @show N = 1000
 @show n_iters = 1000 #10000   #C 1000
-@show max_time = Inf
-@show max_depth = 20 #60   #C 20
+max_time = Inf
+max_depth = 20 #60   #C 20
 @show c_uct = 2.0   #C 5.0
-@show k_state = 4.0 #0.2, #C 4.0,
-@show alpha_state = 1/8.0 #0.0, #C 1/8.0,
+k_state = 4.0 #0.2, #C 4.0,
+alpha_state = 1/8.0 #0.0, #C 1/8.0,
 # @show val = SimpleSolver()
 alldata = DataFrame()
 
 
-scenario = "continuous_driving"
-# problem = "forced_lane_changes"
-
+@show scenario = "continuous_driving"
+@show problem_type = "pomdp"
 
 ## Problem definition
 if scenario == "continuous_driving"
@@ -64,14 +63,15 @@ if scenario == "continuous_driving"
     nb_lanes = 3
     lane_length = 600.
     nb_cars = 20
-    sensor_range = 200.
+    sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
+    @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
 
     initSteps = 200   #To create initial random state
 
     v_des = 25.0
 
     rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, lambda=lambda)
-elseif scenario == "forced_lane_changes"
+elseif scenario == "forced_lane_changes" #ZZZ deprecated
     cor = 0.75
     lambda = 1.0
 
@@ -89,7 +89,7 @@ end
 @show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
-pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range)
+pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range, obs_behaviors=obs_behaviors)
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
@@ -99,10 +99,18 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               semantic_actions = true
                              )
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
-pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
+pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
+pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 
-#problem = mdp    #Choose which problem to work with
-problem = pomdp
+if problem_type == "mdp"
+    problem = mdp
+elseif problem_type == "pomdp"
+    if pomdp.dmodel.phys_param.obs_behaviors
+        problem = pomdp_lr
+    else
+        problem = pomdp
+    end
+end
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -111,7 +119,7 @@ if scenario == "continuous_driving"
     rollout_problem.dmodel.max_dist = Inf
     rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
     rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
-elseif scenario == "forced_lane_changes"
+elseif scenario == "forced_lane_changes" #ZZZ deprecated
     rollout_policy = SimpleSolver()
 end
 
@@ -127,14 +135,6 @@ dpws = DPWSolver(depth=max_depth,
                  # estimate_value=val
                  tree_in_info = DEBUG
                 )
-
-solvers = Dict{String, Solver}(
-    "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
-    "omniscient" => dpws,
-    # "omniscient-x10" => dpws_x10,
-    "mlmpc" => MLMPCSolver(dpws),
-    "meanmpc" => MeanMPCSolver(dpws),)
-
 
 function make_updater(cor, problem, rng_seed)
     wup = WeightUpdateParams(smoothing=0.0, wrong_lane_factor=0.05)
@@ -152,16 +152,15 @@ v_des = 25.0
 ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
-
-## Choice of solver
 if problem isa POMDP
-    solver = MLMPCSolver(dpws)
+    if problem.dmodel.phys_param.obs_behaviors
+        solver = LimitedRangeSolver(dpws) #limited sensor range
+    else
+        solver = MLMPCSolver(dpws) #limited sensor range and estimated behaviors
+    end
 else
-    solver = dpws
+    solver = dpws #omniscient
 end
-# method = "omniscient"
-# method = "mlmpc" #Does not work with mdp
-# solver = solvers[method]
 
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
@@ -174,16 +173,15 @@ sim_problem.throw=true
 i = 1
 rng_seed = i+40001
 rng = MersenneTwister(rng_seed)
-is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
+s_initial = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 # is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
 #                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
 #                                 CarState(pp.lane_length/2, 2, pp.v_med, 0.0, Multilane.TIMID, 1)])
-is = set_ego_behavior(is, ego_acc)
-write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0_i"*string(i)*".png")
+s_initial = set_ego_behavior(s_initial, ego_acc)
+write_to_png(visualize(sim_problem,s_initial,0),"./Figs/state_at_t0_i"*string(i)*".png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
-# ips = MLPhysicalState(is)
-ips = MLPhysicalState(is,problem.dmodel.phys_param.sensor_range)
+o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
 
 metadata = Dict(:rng_seed=>rng_seed, #Not used now
                 :lambda=>lambda,
@@ -197,17 +195,26 @@ hr_ref = HistoryRecorder(max_steps=200, rng=deepcopy(rng), capture_exception=fal
 ##
 
 if sim_problem isa POMDP
-    updater = make_updater(cor, sim_problem, rng_seed)
-    planner = deepcopy(solve(solver, sim_problem))
-    srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, updater, ips, is)
-    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, ips, is)
-    # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
+    if solver isa MLMPCSolver
+        updater = make_updater(cor, sim_problem, rng_seed)
+        planner = deepcopy(solve(solver, sim_problem))
+        srand(planner, rng_seed+60000)   #Sets rng seed of planner
+        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
+        # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
+    else
+        updater = LimitedRangeUpdater()
+        planner = deepcopy(solve(solver, sim_problem))
+        srand(planner, rng_seed+60000)   #Sets rng seed of planner
+        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
+        # hist
+    end
 else
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, is)
-    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, is)
+    hist = simulate(hr, sim_problem, planner, s_initial)
+    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
 end
 
 @show sum(hist.reward_hist)

@@ -129,9 +129,9 @@ dpws = DPWSolver(depth=max_depth,
                 )
 
 
-n_iter = 1000 #ZZZZZZZZZZZZZZZZZZZZZZZ
+n_iter = 2000 #ZZZZZZZZZZZZZZZZZZZZZZZ
 depth = 20 #ZZZ not used?
-c_puct = 10.
+c_puct = 5.
 # replay_memory_max_size = 500
 # training_start = 300
 # training_steps = 1000

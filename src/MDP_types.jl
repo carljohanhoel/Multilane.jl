@@ -160,7 +160,7 @@ function MLPhysicalState(s::MLState, sensor_range::Float64, observe_behaviors::B
     end
 end
 
-state_dist(s::MLState) = MLPhysicalState(s)
+state_dist(p::Union{MDP,POMDP},s::MLState) = MLObs(s, p.dmodel.phys_param.sensor_range, p.dmodel.phys_param.obs_behaviors)
 
 function ==(a::MLPhysicalState, b::MLPhysicalState)
     if isnull(a.terminal) && isnull(b.terminal) # neither terminal

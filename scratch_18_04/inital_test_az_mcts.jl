@@ -39,17 +39,17 @@ using D3Trees
 #Solver parameters
 # @show N = 1000
 @show n_iters = 1000 #10000   #C 1000
-@show max_time = Inf
-@show max_depth = 20 #60   #C 20
+max_time = Inf
+max_depth = 20 #60   #C 20
 @show c_uct = 2.0   #C 5.0
-@show k_state = 4.0 #0.2, #C 4.0,
-@show alpha_state = 1/8.0 #0.0, #C 1/8.0,
+k_state = 4.0 #0.2, #C 4.0,
+alpha_state = 1/8.0 #0.0, #C 1/8.0,
 # @show val = SimpleSolver()
 alldata = DataFrame()
 
 
-scenario = "continuous_driving"
-# problem = "forced_lane_changes"
+@show scenario = "continuous_driving"
+@show problem_type = "pomdp"
 
 
 ## Problem definition
@@ -63,14 +63,15 @@ if scenario == "continuous_driving"
     nb_lanes = 3
     lane_length = 600.
     nb_cars = 20
+    sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
+    @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
 
-
-    initSteps = 200
+    initSteps = 200   #To create initial random state
 
     v_des = 25.0
 
     rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, lambda=lambda)
-elseif scenario == "forced_lane_changes"
+elseif scenario == "forced_lane_changes" #ZZZ deprecated
     cor = 0.75
     lambda = 1.0
 
@@ -88,7 +89,7 @@ end
 @show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
-pp = PhysicalParam(nb_lanes, lane_length=lane_length)
+pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range, obs_behaviors=obs_behaviors)
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
@@ -100,9 +101,17 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                              )
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
+pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 
-problem = mdp    #Choose which problem to work with
-# problem = pomdp
+if problem_type == "mdp"
+    problem = mdp
+elseif problem_type == "pomdp"
+    if pomdp.dmodel.phys_param.obs_behaviors
+        problem = pomdp_lr
+    else
+        problem = pomdp
+    end
+end
 
 ## Solver definition
 if scenario == "continuous_driving"
@@ -129,23 +138,27 @@ dpws = DPWSolver(depth=max_depth,
                 )
 
 
-n_iter = 2000 #ZZZZZZZZZZZZZZZZZZZZZZZ
+@show n_iter = 2000 #ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 depth = 20 #ZZZ not used?
-c_puct = 5.
-# replay_memory_max_size = 500
-# training_start = 300
-# training_steps = 1000
-# n_network_updates_per_episode = 10
-# save_freq = 200
-# eval_freq = 200
-# eval_eps = 3
-replay_memory_max_size = 25000
-training_start = 2000
-training_steps = 1000000
-n_network_updates_per_episode = 10
-save_freq = 5000
-eval_freq = 5000
-eval_eps = 10
+@show c_puct = 5.
+simple_run = false
+if simple_run
+    replay_memory_max_size = 500
+    training_start = 300
+    training_steps = 1000
+    n_network_updates_per_episode = 10
+    save_freq = 200
+    eval_freq = 200
+    eval_eps = 3
+else
+    replay_memory_max_size = 25000
+    training_start = 2000
+    training_steps = 1000000
+    n_network_updates_per_episode = 10
+    save_freq = 5000
+    eval_freq = 5000
+    eval_eps = 10
+end
 rng = MersenneTwister(13)
 
 some_state = initial_state(problem, initSteps=0)
@@ -166,16 +179,9 @@ azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
                rng=rng,
                estimate_value=estimator,
                init_P=estimator,
-               noise_dirichlet = 4,
+               noise_dirichlet = 4.,
                noise_eps = 0.25
                )
-
-solvers = Dict{String, Solver}(
-    "baseline" => SingleBehaviorSolver(dpws, Multilane.NORMAL),
-    "omniscient" => dpws,
-    # "omniscient-x10" => dpws_x10,
-    "mlmpc" => MLMPCSolver(dpws),
-    "meanmpc" => MeanMPCSolver(dpws),)
 
 
 function make_updater(cor, problem, rng_seed)
@@ -195,60 +201,45 @@ ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
 ## Choice of solver
 if problem isa POMDP
-    solver = MLMPCSolver(azs)
+    if problem.dmodel.phys_param.obs_behaviors
+        solver = LimitedRangeSolver(azs) #limited sensor range
+    else
+        solver = MLMPCSolver(azs) #limited sensor range and estimated behaviors
+    end
 else
-    solver = azs
+    solver = azs #omniscient
 end
-# method = "mlmpc" #Does not work with mdp
-# solver = solvers[method]
-# solver = azs
-# solver = MLMPCSolver(azs)
 
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
 
 
-## Run simulations
-
-# N = 25
-# for i in 1:N
-i = 1
-rng_seed = i+40000
+## Run training
+rng_seed = 40000
 rng = MersenneTwister(rng_seed)
 rng_eval = MersenneTwister(rng_seed+1)
-is = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
-# is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
-#                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
-#                                 CarState(pp.lane_length/2, 2, pp.v_med, 0.0, Multilane.TIMID, 1)])
-is = set_ego_behavior(is, ego_acc)
-write_to_png(visualize(sim_problem,is,0),"./Figs/state_at_t0_i"*string(i)*".png")
-#ZZZ Line below is temp, just to start with simple initial state
-# is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
-ips = MLPhysicalState(is)
-
-metadata = Dict(:rng_seed=>rng_seed, #Not used now
-                :lambda=>lambda,
-                :solver=>solver,
-                :dt=>pp.dt,
-                :cor=>cor
-           )
-# hr = HistoryRecorder(max_steps=20, rng=rng, capture_exception=false, show_progress=true)
-# hr_ref = HistoryRecorder(max_steps=20, rng=deepcopy(rng), capture_exception=false, show_progress=true)
 
 hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=false)
 
-
-if problem isa POMDP
-    updater = make_updater(cor, problem, rng_seed)
-    policy = solve(solver,sim_problem)
-    srand(policy, rng_seed+60000)
-    trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
-    train(trainer, hr, problem, policy, updater)
+if sim_problem isa POMDP
+    if solver isa MLMPCSolver
+        updater = make_updater(cor, problem, rng_seed)
+        policy = solve(solver,sim_problem)
+        srand(policy, rng_seed+60000)
+        trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+        train(trainer, hr, problem, policy, updater)
+    else
+        updater = LimitedRangeUpdater()
+        policy = solve(solver,sim_problem)
+        srand(policy, rng_seed+60000)
+        trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+        train(trainer, hr, problem, policy, updater)
+    end
 else
     policy = solve(solver,sim_problem)
     srand(policy, rng_seed+60000)
     trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
-    train(trainer, hr, problem, policy) #ZZZ Add updater and initial_state_dist as inputs
+    train(trainer, hr, problem, policy)
 end
 
 

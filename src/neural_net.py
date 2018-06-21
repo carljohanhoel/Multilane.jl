@@ -267,20 +267,18 @@ class AGZeroModel:
         for state, dist, val in archive_samples:
             batch_states.append(state)
             batch_dists.append(dist)
-            #moved to nn_estimator   #batch_vals.append(float(val) / 20 + 0.5)   #ZZZ, adjust the mapping of the value
             batch_vals.append(val)
         logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
 
         #Tensorboard log
         nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error']
         data = logs
-        data.append(np.sqrt(logs[2])*20)   #ZZZ Scaling
+        data.append(np.sqrt(logs[2]))
         self.write_log(self.tf_callback, nn, data, self.batch_no)
         self.batch_no+=1
 
     def predict(self, states):
         dist, res = self.model.predict(states)
-        #moved to nn_estimator   # res = np.array([r[0] * 20 - 10 for r in res])   #ZZZ, adjust the mapping of the value
         return [dist, res]
 
     def save(self, snapshot_id):

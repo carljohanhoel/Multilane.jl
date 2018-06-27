@@ -14,10 +14,10 @@ class NNEstimator:
         self.replay_memory_max_size = replay_memory_max_size
         self.training_start = training_start
         self.net = AGZeroModel(self.N_states, self.N_actions, self.replay_memory_max_size, self.training_start, log_path)
-        if N_states == 3:   #GridWorld case
-            self.net.create_simple()
-        else:
-            self.net.create_convnet()
+        # if N_states == 3:   #GridWorld case   #Moved to neural_net.py
+        #     self.net.create_simple()
+        # else:
+        #     self.net.create_convnet()
         self.n_val_calls = 0
         self.n_prob_calls = 0
 
@@ -25,8 +25,9 @@ class NNEstimator:
         # value = 0.0
         self.n_val_calls+=1
         [probabilities, value] = self.net.predict(state)
-        value = value*(self.V_max-self.V_min)+self.V_min
-        return np.float64(value)   #Conversion required for julia code. NN outputs array with one element.
+        # value = value*(self.V_max-self.V_min)+self.V_min #Moved to estimator in Julia!
+        # return np.float64(value)   #Conversion required for julia code. NN outputs array with one element.
+        return value
 
     def estimate_distribution(self, state, allowed_actions):
         # n_actions = len(possible_actions)
@@ -34,51 +35,54 @@ class NNEstimator:
         self.n_prob_calls+=1
         [dist, value] = self.net.predict(state)
 
-        #DEBUG
-        if len(np.asarray(allowed_actions).shape) == 1: #just one state
-            n_allowed_actions = np.sum(np.asarray(allowed_actions) * 1)
-            if not n_allowed_actions:
-                print("error, no allowed actions")
-        else:
-            n_allowed_actions = np.sum(np.asarray(allowed_actions)*1,axis=1)
-            if not all(n_allowed_actions):
-                print("error, no allowed actions")
-        if any(np.sum(dist,axis=1)==0):
-            print("error, sum dist = 0")
-        if np.isnan(dist).any():
-            print("dist nan\n")
-            print(state)
-
-        dist = dist*allowed_actions
-        sum_dist = np.sum(dist,axis=1)
-        if any(sum_dist==0):   #Before the network is trained, the only allowed actions could get prob 0. In that case, set equal prior prob.
-            print("error, sum allowed dist = 0")
-            print(state)
-            print(dist)
-            print(allowed_actions)
-            add_dist = ((dist*0+1) * (sum_dist == 0.)[:,np.newaxis])*allowed_actions
-            dist += add_dist
-            sum_dist += np.sum(add_dist,axis=1)
-
-        # dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
-        dist = dist/sum_dist[:,np.newaxis]
-        return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
+        #Moved to estimator in Julia
+        # #DEBUG
+        # if len(np.asarray(allowed_actions).shape) == 1: #just one state
+        #     n_allowed_actions = np.sum(np.asarray(allowed_actions) * 1)
+        #     if not n_allowed_actions:
+        #         print("error, no allowed actions")
+        # else:
+        #     n_allowed_actions = np.sum(np.asarray(allowed_actions)*1,axis=1)
+        #     if not all(n_allowed_actions):
+        #         print("error, no allowed actions")
+        # if any(np.sum(dist,axis=1)==0):
+        #     print("error, sum dist = 0")
+        # if np.isnan(dist).any():
+        #     print("dist nan\n")
+        #     print(state)
+        #
+        # dist = dist*allowed_actions
+        # sum_dist = np.sum(dist,axis=1)
+        # if any(sum_dist==0):   #Before the network is trained, the only allowed actions could get prob 0. In that case, set equal prior prob.
+        #     print("error, sum allowed dist = 0")
+        #     print(state)
+        #     print(dist)
+        #     print(allowed_actions)
+        #     add_dist = ((dist*0+1) * (sum_dist == 0.)[:,np.newaxis])*allowed_actions
+        #     dist += add_dist
+        #     sum_dist += np.sum(add_dist,axis=1)
+        #
+        # # dist = [dist[i,:]/sum_dist[i] for i in range(0,len(sum_dist))]
+        # dist = dist/sum_dist[:,np.newaxis]
+        # return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
+        return dist
 
     def forward_pass(self,states):
-        [dists, values] = self.net.predict(states)
-        return [np.float64(dists), np.float64(values)]
+        [dists, values] = self.net.forward_pass(states)
+        # return [np.float64(dists), np.float64(values)]
+        return [dists, values]
 
     def add_samples_to_memory(self, states, dists, vals):
-        vals = (vals-self.V_min)/(self.V_max-self.V_min)
+        # vals = (vals-self.V_min)/(self.V_max-self.V_min) #Moved to estimator in Julia
         self.net.add_samples_to_memory(states, dists, vals)
 
     def update_network(self):
         self.net.update_network()
 
     def save_network(self, name):
-        directory = os.path.dirname(name)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        # directory = os.path.dirname(name) #Moved to neural_net.py
+        # if not os.path.exists(directory):
+        #     os.makedirs(directory)
         self.net.save(name)
 
     def load_network(self, name):

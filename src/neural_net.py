@@ -5,6 +5,7 @@ import joblib
 import numpy as np
 import random
 import time
+import os
 
 from keras.models import Model, load_model
 from keras.layers import Activation, BatchNormalization, Dense, Flatten, Input, Reshape, concatenate, Lambda, Conv1D, MaxPooling1D
@@ -24,82 +25,19 @@ config.gpu_options.per_process_gpu_memory_fraction = 0.1 #ZZZ Should be correlat
 set_session(tf.Session(config=config))
 
 
-############################
-# AlphaGo Zero style network
-
-class ResNet(object):
-    def __init__(self, input_N=256, filter_N=256, n_stages=19,
-                 kernel_width=3, kernel_height=3,
-                 inpkern_width=3, inpkern_height=3):
-        # number of filters and dimensions of the initial input kernel
-        self.input_N = input_N
-        self.inpkern_width = inpkern_width
-        self.inpkern_height = inpkern_height
-        # base number of filters and dimensions of the followup resnet kernels
-        self.filter_N = filter_N
-        self.kernel_width = kernel_width
-        self.kernel_height = kernel_height
-        self.n_stages = n_stages
-
-    def create(self, width, height, n_planes):
-        bn_axis = 3
-        inp = Input(shape=(width, height, n_planes))
-
-        x = inp
-        x = Conv2D(self.input_N, (self.inpkern_width, self.inpkern_height), padding='same', name='conv1')(x)
-        x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
-        x = Activation('relu')(x)
-
-        for i in range(self.n_stages):
-            x = self.identity_block(x, [self.filter_N, self.filter_N], stage=i+1, block='a')
-
-        self.model = Model(inp, x)
-        return self.model
-
-    def identity_block(self, input_tensor, filters, stage, block):
-        '''The identity_block is the block that has no conv layer at shortcut
-
-        # Arguments
-            input_tensor: input tensor
-            filters: list of integers, the nb_filters of 3 conv layer at main path
-            stage: integer, current stage label, used for generating layer names
-            block: 'a','b'..., current block label, used for generating layer names
-        '''
-        nb_filter1, nb_filter2 = filters
-        bn_axis = 3
-        conv_name_base = 'res' + str(stage) + block + '_branch'
-        bn_name_base = 'bn' + str(stage) + block + '_branch'
-
-        x = input_tensor
-        x = Conv2D(nb_filter1, (self.kernel_width, self.kernel_height),
-                          padding='same', name=conv_name_base + 'a')(x)
-        x = BatchNormalization(axis=bn_axis, name=bn_name_base + 'a')(x)
-        x = Activation('relu')(x)
-
-        x = Conv2D(nb_filter2, (self.kernel_width, self.kernel_height),
-                          padding='same', name=conv_name_base + 'b')(x)
-        x = BatchNormalization(axis=bn_axis, name=bn_name_base + 'b')(x)
-        x = Activation('relu')(x)
-
-        x = add([x, input_tensor])
-        return x
-
-
-class AGZeroModel:
+class NeuralNetwork:
     def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=1e-2):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
-        self.batch_no = 0
+        self.batch_no = 0   #Dynamic
         self.log_path = log_path
 
-        self.archive_fit_samples = 64 #deprecated(?)
-        self.position_archive = [] #deprecated
         # self.replay_memory = []
-        self.replay_memory = [None]*replay_memory_max_size
+        self.replay_memory = [None]*replay_memory_max_size   #Dynamic
         self.replay_memory_max_size = replay_memory_max_size
-        self.replay_memory_write_idx = 0
-        self.replay_memory_size = 0
+        self.replay_memory_write_idx = 0   #Dynamic
+        self.replay_memory_size = 0   #Dynamic
         self.training_start = training_start
 
         self.c = c
@@ -109,31 +47,11 @@ class AGZeroModel:
         self.model_name = time.strftime('G%y%m%dT%H%M%S')
         print(self.model_name)
 
-    def create(self):
-        bn_axis = 3
+        if N_inputs == 3:   #GridWorld test case
+            self.create_simple()
+        else:
+            self.create_convnet()
 
-        N_outputs= self.N_outputs
-        position = Input((N_outputs, N_outputs, 6))
-        resnet = ResNet(n_stages=N_outputs)
-        resnet.create(N_outputs, N_outputs, 6)
-        x = resnet.model(position)
-
-        dist = Conv2D(2, (1, 1))(x)
-        dist = BatchNormalization(axis=bn_axis)(dist)
-        dist = Activation('relu')(dist)
-        dist = Flatten()(dist)
-        dist = Dense(N_outputs * N_outputs + 1, activation='softmax', name='distribution')(dist)
-
-        res = Conv2D(1, (1, 1))(x)
-        res = BatchNormalization(axis=bn_axis)(res)
-        res = Activation('relu')(res)
-        res = Flatten()(res)
-        res = Dense(256, activation='relu')(res)
-        res = Dense(1, activation='sigmoid', name='result')(res)
-
-        self.model = Model(position, [dist, res])
-        self.model.compile(Adam(lr=self.lr), ['categorical_crossentropy', 'binary_crossentropy'])
-        self.model.summary()
 
     def create_simple(self):
         N_inputs = self.N_inputs
@@ -206,33 +124,6 @@ class AGZeroModel:
                                        embeddings_metadata=None)
         self.tf_callback.set_model(self.model)
 
-    def fit_game(self, X_positions, result): #ZZZ not used, just kept for reference as of now
-        X_posres = []
-        for pos, dist in X_positions:
-            X_posres.append((pos, dist, result))
-            result = -result
-
-        self.position_archive.extend(X_posres)
-
-        if len(self.position_archive) >= self.archive_fit_samples:
-            archive_samples = random.sample(self.position_archive, self.archive_fit_samples)
-        else:
-            # initial case
-            archive_samples = self.position_archive
-        # I'm going to some lengths to avoid the potentially overloaded + operator
-        X_fit_samples = list(itertools.chain(X_posres, archive_samples)) #C Samples are picked in a strange way here. Adds the current samples to the archive.
-        X_shuffled = random.sample(X_fit_samples, len(X_fit_samples))
-
-        X, y_dist, y_res = [], [], []
-        for pos, dist, res in X_shuffled:
-            X.append(pos)
-            y_dist.append(dist)
-            y_res.append(float(res) / 2 + 0.5)
-            if len(X) % self.batch_size == 0:
-                self.model.train_on_batch(np.array(X), [np.array(y_dist), np.array(y_res)])   #C Backprop
-                X, y_dist, y_res = [], [], []
-        if len(X) > 0:
-            self.model.train_on_batch(np.array(X), [np.array(y_dist), np.array(y_res)])   #C Backprop
 
     def add_samples_to_memory(self, states, dists, vals):
         assert not (states == None).any(), print("none state present\n" + str(states))
@@ -277,23 +168,27 @@ class AGZeroModel:
         self.write_log(self.tf_callback, nn, data, self.batch_no)
         self.batch_no+=1
 
-    def predict(self, states):
+    def forward_pass(self, states):
         dist, res = self.model.predict(states)
         return [dist, res]
 
-    def save(self, snapshot_id):
-        self.model.save('%s.weights.h5' % (snapshot_id,))
-        joblib.dump(self.replay_memory, '%s.archive.joblib' % (snapshot_id,), compress=5)
+    def save_network(self, filename):
+        directory = os.path.dirname(filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        self.model.save('%s.weights.h5' % (filename,))
+        joblib.dump([self.replay_memory, self.replay_memory_write_idx, self.replay_memory_size, self.batch_no], '%s.archive.joblib' % (filename,), compress=5)
 
-    def load(self, snapshot_id):
-        self.model = load_model('%s.weights.h5' % (snapshot_id,))
-        # self.model.load_weights('%s.weights.h5' % (snapshot_id,))
+    #ZZZZZZZZZZZZZZZ This is probably not enough. Need to store write_idx etc. Look at this carefully!
+    def load_network(self, filename):
+        self.model = load_model('%s.weights.h5' % (filename,))
+        # self.model.load_weights('%s.weights.h5' % (filename,))
 
-        pos_fname = '%s.archive.joblib' % (snapshot_id,)
+        pos_fname = '%s.archive.joblib' % (filename,)
         try:
-            self.replay_memory = joblib.load(pos_fname)
+            [self.replay_memory, self.replay_memory_write_idx, self.replay_memory_size, self.batch_no] = joblib.load(pos_fname)
         except:
-            print('Warning: Cannot load position archive %s' % (pos_fname,))
+            print('Warning: Cannot load memory archive %s' % (pos_fname,))
 
     def write_log(self, callback, names, logs, batch_no):
         for name, value in zip(names, logs):

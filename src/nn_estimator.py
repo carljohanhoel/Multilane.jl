@@ -64,6 +64,10 @@ class NNEstimator:
         dist = dist/sum_dist[:,np.newaxis]
         return np.float64(dist)   #Float64 required in julia code. NN outputs float32.
 
+    def forward_pass(self,states):
+        [dists, values] = self.net.predict(states)
+        return [np.float64(dists), np.float64(values)]
+
     def add_samples_to_memory(self, states, dists, vals):
         vals = (vals-self.V_min)/(self.V_max-self.V_min)
         self.net.add_samples_to_memory(states, dists, vals)

@@ -5,44 +5,22 @@ from datetime import datetime
 
 sys.path.append('../src/')
 
-from nn_estimator import NNEstimator
+from neural_net import NeuralNetwork
 
-# nn = NNEstimator(N_states=82,N_actions=5, replay_memory_max_size=55, training_start=40, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
-nn = NNEstimator(N_states=82,N_actions=5, V_min = 0, V_max = 20, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
-
-# state = np.zeros([1,nn.N_states])
-# state = np.array([list(range(1,63))])
-# state[0,2] = 1
-# state[0,14] = 1
-# state[0,17] = 1
-# nn.net.model.predict(state)
-# tmp = nn.net.tmpModel.predict(state)
+nn = NeuralNetwork(N_inputs=82,N_outputs=5, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 n_samples = 200
 np.random.seed(1)
-state = np.random.rand(n_samples,nn.N_states)
-# state = np.ones([20,nn.N_states])
-allowed_actions = np.ones([n_samples,nn.N_actions])
-allowed_actions[0]=[1, 0, 0, 1, 0]
-allowed_actions[1]=[1, 0, 0, 0, 0]
-allowed_actions[2]=[0, 1, 1, 1, 1]
-# state = np.zeros([1,20])
-# state[0][0] = 769.604
-# state[0][1] = 38.25
-# state[0][2] = 19.758
-# allowed_actions = [[0.0, 0.0, 0.0, 1.0, 1.0]]
-train_dist = np.ones([n_samples,nn.N_actions])*0.5
+state = np.random.rand(n_samples,nn.N_inputs)
+train_dist = np.ones([n_samples,nn.N_outputs])*0.5
 train_val = np.ones(n_samples)
-est_val = nn.estimate_value(state)
-dist_act = nn.estimate_distribution(state,allowed_actions)
+dist_act, est_val = nn.forward_pass(state)
 print(est_val)
 print(dist_act)
-nn.debug_print_n_calls()
 
 #Test batch norm
-dist_act_single = nn.estimate_distribution(np.expand_dims(state[0],0),np.expand_dims(allowed_actions[0],0))
-assert(np.allclose(dist_act_single[0],dist_act[0]))   #There is a small difference when calling witha  batch and when calling with a single vecotr. Does it matter?
-
+dist_act_single, _ = nn.forward_pass(np.expand_dims(state[0],0))
+assert(np.allclose(dist_act_single[0],dist_act[0]))   #There is a small difference when calling with a batch and when calling with a single vector. Does it matter?
 
 
 #Training
@@ -53,19 +31,18 @@ for i in range(0,5):
 
 
 #Save/load
-est_val1 = nn.estimate_value(state)
-dist_act1 = nn.estimate_distribution(state,allowed_actions)
+dist_act1, est_val1 = nn.forward_pass(state)
 
 nn.save_network("../Logs/testSave2")
-nn.load_network("../Logs/testSave2")
+nn2 = NeuralNetwork(N_inputs=nn.N_inputs,N_outputs=nn.N_outputs, replay_memory_max_size=nn.replay_memory_max_size, training_start=nn.training_start, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+nn2.load_network("../Logs/testSave2")
 
-est_val2 = nn.estimate_value(state)
-dist_act2 = nn.estimate_distribution(state,allowed_actions)
+dist_act2, est_val2 = nn2.forward_pass(state)
 
 assert(np.all(est_val1 == est_val2))
 assert(np.all(dist_act1 == dist_act2))
 
 
 #Test batch norm
-dist_act_single = nn.estimate_distribution(np.expand_dims(state[0],0),np.expand_dims(allowed_actions[0],0))
+dist_act_single, _ = nn.forward_pass(np.expand_dims(state[0],0))
 assert(np.allclose(dist_act_single[0],dist_act1[0]))

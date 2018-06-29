@@ -1,14 +1,23 @@
 # ZZZ Removed precompilation of Multilane, not sure what that means
 
 push!(LOAD_PATH,joinpath("./src"))
-#include("../src/Multilane.jl")   #ZZZ This may be needed...
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-using Multilane
-using MCTS
-using POMDPToolbox
-using POMDPs
+parallel_version = true   #Test code in parallel mode
+# parallel_version = false
+
+if parallel_version
+   n_workers = 8
+   addprocs(n_workers+1)
+else
+   n_workers = 1
+end
+
+@everywhere using Multilane
+@everywhere using MCTS
+@everywhere using POMDPToolbox
+@everywhere using POMDPs
 # using POMCP
 using Missings
 using DataFrames
@@ -29,27 +38,17 @@ using D3Trees
 @everywhere using D3Trees
 
 
-@everywhere using Missings
-@everywhere using Multilane
-@everywhere using POMDPToolbox
+# @everywhere using Missings
+# @everywhere using Multilane
+# @everywhere using POMDPToolbox
 
 
 ##
 
-#Solver parameters
-# @show N = 1000
-@show n_iters = 1000 #10000   #C 1000
-max_time = Inf
-max_depth = 20 #60   #C 20
-@show c_uct = 2.0   #C 5.0
-k_state = 4.0 #0.2, #C 4.0,
-alpha_state = 1/8.0 #0.0, #C 1/8.0,
-# @show val = SimpleSolver()
-alldata = DataFrame()
 
 
 @show scenario = "continuous_driving"
-@show problem_type = "pomdp"
+@show problem_type = "mdp"
 
 
 ## Problem definition
@@ -113,7 +112,17 @@ elseif problem_type == "pomdp"
     end
 end
 
-## Solver definition
+##DPW solver parameters (not used for AZ!)
+@show n_iters = 1000 #10000   #C 1000
+max_time = Inf
+max_depth = 20 #60   #C 20
+@show c_uct = 2.0   #C 5.0
+k_state = 4.0 #0.2, #C 4.0,
+alpha_state = 1/8.0 #0.0, #C 1/8.0,
+# @show val = SimpleSolver()
+alldata = DataFrame()
+
+# Solver definition
 if scenario == "continuous_driving"
     rollout_problem = deepcopy(problem)
     rollout_problem.dmodel.semantic_actions = false
@@ -138,37 +147,55 @@ dpws = DPWSolver(depth=max_depth,
                 )
 
 
-@show n_iter = 2000 #ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-depth = 20 #ZZZ not used?
-@show c_puct = 5.
+@show n_iter = 2000
+depth = 20 #ZZZ not used
+@show c_puct = 2.
 simple_run = false
 if simple_run
-    replay_memory_max_size = 500
-    training_start = 300
-    training_steps = 1000
+    n_iter = 20
+    replay_memory_max_size = 200
+    training_start = 100
+    training_steps = Int(ceil(1000/n_workers))
     n_network_updates_per_episode = 10
-    save_freq = 200
-    eval_freq = 200
-    eval_eps = 3
+    save_freq = Int(ceil(100/n_workers))
+    eval_freq = Int(ceil(100/n_workers))
+    eval_eps = Int(ceil(2/n_workers))
+    episode_length = 20
 else
     replay_memory_max_size = 25000
     training_start = 2000
-    training_steps = 1000000
+    training_steps = Int(ceil(1000000/n_workers))
     n_network_updates_per_episode = 10
-    save_freq = 5000
-    eval_freq = 5000
-    eval_eps = 10
+    save_freq = Int(ceil(5000/n_workers))
+    eval_freq = Int(ceil(5000/n_workers))
+    eval_eps = Int(ceil(10/n_workers))
+    episode_length = 200
 end
 rng = MersenneTwister(13)
+
+rng_seed = 13
+rng_estimator=MersenneTwister(rng_seed+1)
+rng_evaluator=MersenneTwister(rng_seed+2)
+rng_solver=MersenneTwister(rng_seed+3)
+rng_history=MersenneTwister(rng_seed+4)
+rng_trainer=MersenneTwister(rng_seed+5)
 
 some_state = initial_state(problem, initSteps=0)
 n_s = length(MCTS.convert_state(some_state,problem))
 n_a = n_actions(problem)
 v_min, v_max = max_min_cum_reward(problem)
-estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/nn_estimator"
+estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/neural_net"
 log_name = length(ARGS)>0 ? ARGS[1] : ""
 log_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"*Dates.format(Dates.now(), "yymmdd_HHMMSS_")*log_name
-estimator = NNEstimator(rng, estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
+
+if parallel_version
+   #Start queue on process 2
+   @spawnat 2 run_queue(NetworkQueue(estimator_path, log_path, n_s, n_a, replay_memory_max_size, training_start, false),cmd_queue,res_queue)
+   estimator = NNEstimatorParallel(v_min, v_max)
+   sleep(3) #Wait for queue to be set up before continuing
+else
+   estimator = NNEstimator(rng_estimator, estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
+end
 
 azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
                k_state=3.,
@@ -176,7 +203,7 @@ azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
                alpha_state=0.2,
                enable_action_pw=false,
                check_repeat_state=false,
-               rng=rng,
+               rng=rng_solver,
                estimate_value=estimator,
                init_P=estimator,
                noise_dirichlet = 4.,
@@ -213,34 +240,48 @@ end
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
 
-
-## Run training
-rng_seed = 40000
-rng = MersenneTwister(rng_seed)
-rng_eval = MersenneTwister(rng_seed+1)
-
-hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=false)
+hr = HistoryRecorder(max_steps=episode_length, rng=rng_history, capture_exception=false, show_progress=false)
 
 if sim_problem isa POMDP
     if solver isa MLMPCSolver
         updater = make_updater(cor, problem, rng_seed)
-        policy = solve(solver,sim_problem)
-        srand(policy, rng_seed+60000)
-        trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
-        train(trainer, hr, problem, policy, updater)
+        # policy = solve(solver,sim_problem)
+        # srand(policy, rng_seed+60000)
+        # trainer = Trainer(rng=rng_trainer, rng_eval=rng_evaluator, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+        # train(trainer, hr, problem, policy, updater)
     else
         updater = LimitedRangeUpdater()
-        policy = solve(solver,sim_problem)
-        srand(policy, rng_seed+60000)
-        trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
-        train(trainer, hr, problem, policy, updater)
+        # policy = solve(solver,sim_problem)
+        # srand(policy, rng_seed+60000)
+        # trainer = Trainer(rng=rng_trainer, rng_eval=rng_evaluator, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+        # train(trainer, hr, problem, policy, updater)
     end
 else
-    policy = solve(solver,sim_problem)
-    srand(policy, rng_seed+60000)
-    trainer = Trainer(rng=rng, rng_eval=rng_eval, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
-    train(trainer, hr, problem, policy)
+    # policy = solve(solver,sim_problem)
+    # srand(policy, rng_seed+60000)
+    # trainer = Trainer(rng=rng_trainer, rng_eval=rng_evaluator, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+    # train(trainer, hr, problem, policy)
 end
 
+policy = solve(solver,sim_problem)
+srand(policy, rng_seed+5)
 
+##
+trainer = Trainer(rng=rng_trainer, rng_eval=rng_evaluator, training_steps=training_steps, n_network_updates_per_episode=n_network_updates_per_episode, save_freq=save_freq, eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, show_progress=true, log_dir=log_path)
+if parallel_version
+   if sim_problem isa POMDP
+      processes = train_parallel(trainer, hr, problem, policy, updater)
+   else
+      processes = train_parallel(trainer, hr, problem, policy)
+   end
+   for proc in processes #This make Julia wait with terminating until all processes are done. However, all processes will never finish when stash size is bigger than 1. Fine for now...
+      fetch(proc)
+   end
+else
+   if sim_problem isa POMDP
+      train(trainer, hr, problem, policy, updater)
+   else
+      train(trainer, hr, problem, policy)
+   end
+end
 ##

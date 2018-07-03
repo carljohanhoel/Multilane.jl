@@ -24,6 +24,15 @@ config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.1 #ZZZ Should be correlated with network size
 set_session(tf.Session(config=config))
 
+class ReplayMemory():
+    def __init__(self,N_inputs,N_outputs,replay_memory_max_size, training_start):
+        self.states = [np.zeros(N_inputs)] * replay_memory_max_size  # Dynamic
+        self.dists = [np.zeros(N_outputs)] * replay_memory_max_size  # Dynamic
+        self.vals = [np.zeros(1)] * replay_memory_max_size  # Dynamic
+        self.max_size = replay_memory_max_size
+        self.write_idx = 0  # Dynamic
+        self.size = 0  # Dynamic
+        self.training_start = training_start
 
 class NeuralNetwork:
     def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=1e-2):
@@ -33,12 +42,13 @@ class NeuralNetwork:
         self.batch_no = 0   #Dynamic
         self.log_path = log_path
 
-        # self.replay_memory = []
-        self.replay_memory = [None]*replay_memory_max_size   #Dynamic
-        self.replay_memory_max_size = replay_memory_max_size
-        self.replay_memory_write_idx = 0   #Dynamic
-        self.replay_memory_size = 0   #Dynamic
-        self.training_start = training_start
+        self.rm = ReplayMemory(N_inputs, N_outputs, replay_memory_max_size, training_start)
+        # # self.replay_memory = []
+        # self.replay_memory = [None]*replay_memory_max_size   #Dynamic
+        # self.replay_memory_max_size = replay_memory_max_size
+        # self.replay_memory_write_idx = 0   #Dynamic
+        # self.replay_memory_size = 0   #Dynamic
+        # self.training_start = training_start
 
         self.c = c
         self.loss_weights = loss_weights
@@ -56,15 +66,16 @@ class NeuralNetwork:
     def create_simple(self):
         N_inputs = self.N_inputs
         N_outputs = self.N_outputs
+        N_size = 32
 
         state = Input(shape=(N_inputs,))
-        joint_net = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(state)
-        joint_net = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        joint_net = Dense(N_size, activation='relu', kernel_regularizer=regularizers.l2(self.c))(state)
+        joint_net = Dense(N_size, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
 
-        dist = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        dist = Dense(N_size, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
         dist = Dense(N_outputs, activation='softmax', name='probabilities', kernel_regularizer=regularizers.l2(self.c))(dist)
 
-        val = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        val = Dense(N_size, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
         val = Dense(1, activation='sigmoid', name='value', kernel_regularizer=regularizers.l2(self.c))(val)
 
         self.model = Model(state, [dist, val])
@@ -129,37 +140,77 @@ class NeuralNetwork:
         assert not (states == None).any(), print("none state present\n" + str(states))
         assert not (dists == None).any(), print("none dist present\n" + str(dists))
         assert not (vals == None).any(), print("none val present\n" + str(vals))
-        new_samples = []
-        for i in range(0,len(states)):   #ZZZ This can be done faster
-            new_samples.append([states[i],dists[i],vals[i]])
-        idx = self.replay_memory_write_idx
-        ns = len(new_samples)
-        if idx + ns <= self.replay_memory_max_size:
-            self.replay_memory[idx:idx+ns] = new_samples
-            self.replay_memory_write_idx += ns
-        else:
-            self.replay_memory[idx:] = new_samples[0:self.replay_memory_max_size-idx]
-            self.replay_memory[0:ns-(self.replay_memory_max_size-idx)] = new_samples[self.replay_memory_max_size-idx:]
-            self.replay_memory_write_idx = ns-(self.replay_memory_max_size-idx)
+        # new_samples = []
+        # for i in range(0,len(states)):   #ZZZ This can be done faster
+        #     new_samples.append([states[i],dists[i],vals[i]])
+        # idx = self.replay_memory_write_idx
+        # ns = len(new_samples)
+        # if idx + ns <= self.replay_memory_max_size:
+        #     self.replay_memory[idx:idx+ns] = new_samples
+        #     self.replay_memory_write_idx += ns
+        # else:
+        #     self.replay_memory[idx:] = new_samples[0:self.replay_memory_max_size-idx]
+        #     self.replay_memory[0:ns-(self.replay_memory_max_size-idx)] = new_samples[self.replay_memory_max_size-idx:]
+        #     self.replay_memory_write_idx = ns-(self.replay_memory_max_size-idx)
+        #
+        # self.replay_memory_size = min(self.replay_memory_max_size, self.replay_memory_size + ns)
+        # assert (self.replay_memory_max_size == len(self.replay_memory)), "replay memory grew out of bounds"
 
-        self.replay_memory_size = min(self.replay_memory_max_size, self.replay_memory_size + ns)
-        assert (self.replay_memory_max_size == len(self.replay_memory)), "replay memory grew out of bounds"
+        idx = self.rm.write_idx
+        ns = len(states)
+        if idx + ns <= self.rm.max_size:
+            self.rm.states[idx:idx+ns] = states.tolist()
+            self.rm.dists[idx:idx+ns] = dists.tolist()
+            self.rm.vals[idx:idx+ns] = vals.tolist()
+            self.rm.write_idx += ns
+        else:
+            self.rm.states[idx:] = states.tolist()[0:self.rm.max_size-idx]
+            self.rm.dists[idx:] = dists.tolist()[0:self.rm.max_size - idx]
+            self.rm.vals[idx:] = vals.tolist()[0:self.rm.max_size - idx]
+            self.rm.states[0:ns-(self.rm.max_size-idx)] = states.tolist()[self.rm.max_size-idx:]
+            self.rm.dists[0:ns - (self.rm.max_size - idx)] = dists.tolist()[self.rm.max_size - idx:]
+            self.rm.vals[0:ns - (self.rm.max_size - idx)] = vals.tolist()[self.rm.max_size - idx:]
+            self.rm.write_idx = ns-(self.rm.max_size-idx)
+
+        self.rm.size = min(self.rm.max_size,self.rm.size+ns)
+        assert(self.rm.max_size == len(self.rm.states)), "replay memory grew out of bounds"
+
 
     def update_network(self):
-        if self.replay_memory_size >= self.training_start:
-            if self.replay_memory_size == self.replay_memory_max_size:
-                archive_samples = random.sample(self.replay_memory, self.batch_size)
-            else:
-                archive_samples = random.sample(self.replay_memory[0:self.replay_memory_write_idx-1], self.batch_size)
+        # if self.replay_memory_size >= self.training_start:
+        #     if self.replay_memory_size == self.replay_memory_max_size:
+        #         archive_samples = random.sample(self.replay_memory, self.batch_size)
+        #     else:
+        #         archive_samples = random.sample(self.replay_memory[0:self.replay_memory_write_idx-1], self.batch_size)
+        # else:
+        #     return #Do nothing until replay memory is bigger than training start
+        #
+        # batch_states, batch_dists, batch_vals = [], [], []
+        # for state, dist, val in archive_samples:
+        #     batch_states.append(state)
+        #     batch_dists.append(dist)
+        #     batch_vals.append(val)
+
+
+        if self.rm.size >= self.rm.training_start:
+            # if self.rm.size == self.rm.max_size:
+            idx = np.random.choice(np.arange(self.rm.size), self.batch_size)
+            archive_states = np.array(self.rm.states)[idx]
+            archive_dists = np.array(self.rm.dists)[idx]
+            archive_vals = np.array(self.rm.vals)[idx]
+                # archive_states = random.sample(self.rm.states,self.batch_size)
+                # archive_dists = random.sample(self.rm.dists, self.batch_size)
+                # archive_vals = random.sample(self.rm.vals, self.batch_size)
+            # else:
+            #     archive_states = random.sample(self.rm.states[0:self.rm.write_idx-1], self.batch_size)
+            #     archive_dists = random.sample(self.rm.dists[0:self.rm.write_idx - 1], self.batch_size)
+            #     archive_vals = random.sample(self.rm.vals[0:self.rm.write_idx - 1], self.batch_size)
         else:
             return #Do nothing until replay memory is bigger than training start
 
-        batch_states, batch_dists, batch_vals = [], [], []
-        for state, dist, val in archive_samples:
-            batch_states.append(state)
-            batch_dists.append(dist)
-            batch_vals.append(val)
-        logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
+        # logs = self.model.train_on_batch(np.array(batch_states), [np.array(batch_dists), np.array(batch_vals)])   #C Backprop
+
+        logs = self.model.train_on_batch(archive_states, [archive_dists, archive_vals])  # C Backprop
 
         #Tensorboard log
         nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error']
@@ -177,7 +228,10 @@ class NeuralNetwork:
         if not os.path.exists(directory):
             os.makedirs(directory)
         self.model.save('%s.weights.h5' % (filename,))
-        joblib.dump([self.replay_memory, self.replay_memory_write_idx, self.replay_memory_size, self.batch_no], '%s.archive.joblib' % (filename,), compress=5)
+        # joblib.dump([self.replay_memory, self.replay_memory_write_idx, self.replay_memory_size, self.batch_no], '%s.archive.joblib' % (filename,), compress=5)
+
+        joblib.dump([self.rm, self.batch_no],
+                    '%s.archive.joblib' % (filename,), compress=5)
 
     #ZZZZZZZZZZZZZZZ This is probably not enough. Need to store write_idx etc. Look at this carefully!
     def load_network(self, filename):
@@ -186,7 +240,8 @@ class NeuralNetwork:
 
         pos_fname = '%s.archive.joblib' % (filename,)
         try:
-            [self.replay_memory, self.replay_memory_write_idx, self.replay_memory_size, self.batch_no] = joblib.load(pos_fname)
+            # [self.replay_memory, self.replay_memory_write_idx, self.replay_memory_size, self.batch_no] = joblib.load(pos_fname)
+            [self.rm, self.batch_no] = joblib.load(pos_fname)
         except:
             print('Warning: Cannot load memory archive %s' % (pos_fname,))
 

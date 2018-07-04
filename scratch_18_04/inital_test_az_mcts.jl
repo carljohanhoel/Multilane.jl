@@ -8,7 +8,7 @@ parallel_version = true   #Test code in parallel mode
 # parallel_version = false
 
 if parallel_version
-   n_workers = 8
+   n_workers = 16
    addprocs(n_workers+1)
 else
    n_workers = 1

@@ -2,19 +2,20 @@ import sys
 import numpy as np
 import pickle
 from datetime import datetime
+import time
 
 sys.path.append('../src/')
 
 from neural_net import NeuralNetwork
 
-nn = NeuralNetwork(N_inputs=3,N_outputs=4, replay_memory_max_size=52, training_start=40, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+nn = NeuralNetwork(N_inputs=3,N_outputs=4, replay_memory_max_size=1052, training_start=1040, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 rng = np.random.RandomState(1)
 #
-state = rng.rand(5,3)
-train_dist = rng.rand(5,4)
+state = rng.rand(200,3)
+train_dist = rng.rand(200,4)
 train_dist = train_dist/np.sum(train_dist,1)[:,None]
-train_val = rng.rand(5,1)
+train_val = rng.rand(200,1)
 # state = rng.rand(1,3)
 # train_dist = rng.rand(1,4)
 # train_dist = train_dist/np.sum(train_dist)
@@ -35,12 +36,24 @@ print(val_)
 # for i in range(1,100000):
 #     nn.forward_pass(state_loaded)
 
+# start_time = time.time()
+# #Training
+# for i in range(0,100):
+#     nn.add_samples_to_memory(state, train_dist, train_val) #Should be state, mcts_dist, actual_value
+#     for i in range (0,10):
+#         nn.update_network()
+# print(time.time()-start_time)
 
-#Training
-for i in range(0,100):
-    nn.add_samples_to_memory(state, train_dist, train_val) #Should be state, mcts_dist, actual_value
-    for i in range (0,100):
-        nn.update_network()
+# start_time = time.time()
+# for i in range(0,10000):
+#     nn.model.train_on_batch(state[0:32], [train_dist[0:32], train_val[0:32]])
+# print(time.time()-start_time)
+
+start_time = time.time()
+for i in range(0,5000):
+    nn.model.predict(state[0:16,:])
+print(time.time()-start_time)
+
 
 #Save/load
 dist1, val1 = nn.forward_pass(state)

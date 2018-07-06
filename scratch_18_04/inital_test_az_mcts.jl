@@ -8,7 +8,7 @@ parallel_version = true   #Test code in parallel mode
 # parallel_version = false
 
 if parallel_version
-   n_workers = 16
+   n_workers = 10
    addprocs(n_workers+1)
 else
    n_workers = 1
@@ -163,12 +163,12 @@ if simple_run
     episode_length = 20
 else
     replay_memory_max_size = 25000
-    training_start = 2000
-    training_steps = Int(ceil(1000000/n_workers))
+    training_start = 5000
+    training_steps = Int(ceil(10000000/n_workers))
     n_network_updates_per_episode = 10
     save_freq = Int(ceil(5000/n_workers))
     eval_freq = Int(ceil(5000/n_workers))
-    eval_eps = Int(ceil(10/n_workers))
+    eval_eps = Int(ceil(5/n_workers))
     episode_length = 200
 end
 rng = MersenneTwister(13)

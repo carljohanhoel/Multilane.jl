@@ -35,7 +35,7 @@ class ReplayMemory():
         self.training_start = training_start
 
 class NeuralNetwork:
-    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 1], lr=1e-2):
+    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 1], lr=1e-2, debug=False):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
@@ -55,6 +55,8 @@ class NeuralNetwork:
             self.create_simple()
         else:
             self.create_convnet()
+
+        self.debug = debug
 
 
     def create_simple(self):
@@ -150,6 +152,8 @@ class NeuralNetwork:
         self.rm.size = min(self.rm.max_size,self.rm.size+ns)
         assert(self.rm.max_size == len(self.rm.states)), "replay memory grew out of bounds"
 
+        if self.debug: print("Memory size: "+str(self.rm.size)+", write idx: "+str(self.rm.write_idx))
+
 
     def update_network(self):
         if self.rm.size >= self.rm.training_start:
@@ -161,6 +165,8 @@ class NeuralNetwork:
             return #Do nothing until replay memory is bigger than training start
 
         logs = self.model.train_on_batch(archive_states, [archive_dists, archive_vals])  # C Backprop
+
+        if self.debug: print("Updates: "+str(self.batch_no))
 
         #Tensorboard log
         nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error']
@@ -181,7 +187,6 @@ class NeuralNetwork:
         joblib.dump([self.rm, self.batch_no],
                     '%s.archive.joblib' % (filename,), compress=5)
 
-    #ZZZZZZZZZZZZZZZ This is probably not enough. Need to store write_idx etc. Look at this carefully!
     def load_network(self, filename):
         self.model = load_model('%s.weights.h5' % (filename,))
 

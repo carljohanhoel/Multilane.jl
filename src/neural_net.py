@@ -35,7 +35,7 @@ class ReplayMemory():
         self.training_start = training_start
 
 class NeuralNetwork:
-    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 1], lr=1e-2, debug=False):
+    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=1e-2, debug=False):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
@@ -164,14 +164,22 @@ class NeuralNetwork:
         else:
             return #Do nothing until replay memory is bigger than training start
 
+        # print(archive_vals)
+        # _, v_tmp = self.model.predict(archive_states)
+        # print(v_tmp)
+        # print(np.sum((archive_vals-v_tmp)**2)/len(v_tmp))
+
         logs = self.model.train_on_batch(archive_states, [archive_dists, archive_vals])  # C Backprop
 
         if self.debug: print("Updates: "+str(self.batch_no))
 
         #Tensorboard log
-        nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error']
+        nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error', '"ideal" cross entropy', 'actual - ideal crossentropy']
+        # print(logs)
         data = logs
         data.append(np.sqrt(logs[2]))
+        data.append(-np.sum(archive_dists * np.log(archive_dists)) / len(archive_dists))
+        data.append(data[1]-data[4])
         self.write_log(self.tf_callback, nn, data, self.batch_no)
         self.batch_no+=1
 

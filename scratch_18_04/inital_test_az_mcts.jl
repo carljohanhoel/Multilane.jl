@@ -184,6 +184,8 @@ some_state = initial_state(problem, initSteps=0)
 n_s = length(MCTS.convert_state(some_state,problem))
 n_a = n_actions(problem)
 v_min, v_max = max_min_cum_reward(problem)
+v_max += 0.1*(v_max-v_min) #To make it easier for sigmoid to reach max or min value
+v_min -= 0.1*(v_max-v_min)
 estimator_path = "/home/cj/2018/Stanford/Code/Multilane.jl/src/neural_net"
 log_name = length(ARGS)>0 ? ARGS[1] : ""
 log_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"*Dates.format(Dates.now(), "yymmdd_HHMMSS_")*log_name

@@ -37,12 +37,23 @@ print(val_)
 # for i in range(1,100000):
 #     nn.forward_pass(state_loaded)
 
+
 start_time = time.time()
 #Training
 for i in range(0,10):
     nn.add_samples_to_memory(state, train_dist, train_val) #Should be state, mcts_dist, actual_value
     for i in range (0,100):
         nn.update_network()
+print(time.time()-start_time)
+
+start_time = time.time()
+for i in range(0,1000):
+    nn.add_samples_to_memory(state, train_dist, train_val) #Should be state, mcts_dist, actual_value
+print(time.time()-start_time)
+
+start_time = time.time()
+for i in range(0,100000):
+    nn.update_network()
 print(time.time()-start_time)
 
 

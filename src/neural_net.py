@@ -184,8 +184,7 @@ class NeuralNetwork:
         self.batch_no+=1
 
     def forward_pass(self, states):
-        dist, res = self.model.predict(states)
-        return [dist, res]
+        return self.model.predict(states)
 
     def save_network(self, filename):
         directory = os.path.dirname(filename)

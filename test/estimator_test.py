@@ -52,7 +52,7 @@ for i in range(0,1000):
 print(time.time()-start_time)
 
 start_time = time.time()
-for i in range(0,100000):
+for i in range(0,1000):
     nn.update_network()
 print(time.time()-start_time)
 
@@ -78,6 +78,7 @@ nn.save_network("../Logs/testSave2")
 
 nn2 = NeuralNetwork(N_inputs=nn.N_inputs,N_outputs=nn.N_outputs, replay_memory_max_size=nn.rm.max_size, training_start=nn.rm.training_start, log_path='../Logs/' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 nn2.load_network("../Logs/testSave2")
+nn2.load_network("../Logs/180718_180800_20_workers_weights_1_10_puct_0p25_10_updates_per_sample_tau_1p1_stash_1_1p5/3507")
 
 dist2, val2 = nn2.forward_pass(state)
 rm2 = nn2.rm

@@ -15,6 +15,7 @@ rng = np.random.RandomState(1)
 #
 state = rng.rand(200,3)
 train_dist = rng.rand(200,4)
+train_dist[0:9,0] = 0.0
 train_dist = train_dist/np.sum(train_dist,1)[:,None]
 train_val = rng.rand(200,1)
 # state = rng.rand(1,3)
@@ -78,7 +79,7 @@ nn.save_network("../Logs/testSave2")
 
 nn2 = NeuralNetwork(N_inputs=nn.N_inputs,N_outputs=nn.N_outputs, replay_memory_max_size=nn.rm.max_size, training_start=nn.rm.training_start, log_path='../Logs/' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 nn2.load_network("../Logs/testSave2")
-nn2.load_network("../Logs/180718_180800_20_workers_weights_1_10_puct_0p25_10_updates_per_sample_tau_1p1_stash_1_1p5/3507")
+# nn2.load_network("../Logs/180718_180800_20_workers_weights_1_10_puct_0p25_10_updates_per_sample_tau_1p1_stash_1_1p5/3507")
 
 dist2, val2 = nn2.forward_pass(state)
 rm2 = nn2.rm

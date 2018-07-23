@@ -134,6 +134,7 @@ class NeuralNetwork:
 
     def add_samples_to_memory(self, states, dists, vals):
         idx = self.rm.write_idx
+        dists += np.nextafter(0,1) #Add eps to avoid problems with log(0.0)=-inf in network update
         ns = len(states)
         if idx + ns <= self.rm.max_size:
             self.rm.states[idx:idx+ns] = states.tolist()
@@ -176,12 +177,21 @@ class NeuralNetwork:
         #Tensorboard log
         nn = ['loss', 'probabilities_loss','value_loss', 'absolute value error', '"ideal" cross entropy', 'actual - ideal crossentropy']
         # print(logs)
+        # print(archive_dists)
+        # print(len(archive_dists))
+        # print(self.rm.size)
+        # print(idx)
+        # print( -np.sum(archive_dists * np.log(archive_dists)) )
+        # print( np.log(archive_dists) )
+        # print( len(archive_dists) )
+
         data = logs
         data.append(np.sqrt(logs[2]))
         data.append(-np.sum(archive_dists * np.log(archive_dists)) / len(archive_dists))
         data.append(data[1]-data[4])
         self.write_log(self.tf_callback, nn, data, self.batch_no)
         self.batch_no+=1
+
 
     def forward_pass(self, states):
         return self.model.predict(states)

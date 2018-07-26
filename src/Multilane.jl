@@ -11,7 +11,7 @@ import POMDPs: update, initialize_belief
 import POMDPs: generate_s, generate_sr, initial_state, generate_o, generate_sor
 
 using MCTS
-import MCTS: convert_state, n_actions, state_dist
+import MCTS: convert_state, n_actions, state_dist, create_eval_log
 
 import Distributions: Dirichlet, Exponential, Gamma, rand
 import Distributions
@@ -104,7 +104,9 @@ export
     BehaviorSolver,
     IDMLaneSeekingSolver,
     OptimisticValue,
-    max_min_cum_reward
+    max_min_cum_reward,
+    create_eval_log,
+    NoCrashSemanticActionSpace
 
 export
     SingleBehaviorSolver,

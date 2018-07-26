@@ -120,3 +120,28 @@ end
 #
 #     return r
 # end
+
+
+function MCTS.create_eval_log(p::Union{NoCrashMDP,NoCrashPOMDP,NoCrashPOMDP_lr},hist::Union{POMDPToolbox.MDPHistory,POMDPToolbox.POMDPHistory}, process_id::Int, step::Int)
+    log = Array{Float64}[]
+    push!(log,[process_id, step, sum(hist.reward_hist)])
+    push!(log,hist.reward_hist)
+    push!(log, [hist.state_hist[i].x for i=1:length(hist.state_hist)]) #Ego x position
+    push!(log, [hist.state_hist[i].cars[1].y for i=1:length(hist.state_hist)]) #Ego y position
+    push!(log, [hist.state_hist[i].cars[1].vel for i=1:length(hist.state_hist)]) #Ego velocity
+    push!(log, [hist.state_hist[i].cars[1].lane_change for i=1:length(hist.state_hist)]) #Ego lane change
+    push!(log, [hist.state_hist[i].cars[1].behavior.p_idm[3] for i=1:length(hist.state_hist)]) #Ego set time gap
+    push!(log, [hist.state_hist[i].cars[1].behavior.p_idm[4] for i=1:length(hist.state_hist)]) #Ego set speed
+    actions = Array{Float64}(length(hist.action_hist))
+    if hist.action_hist[1].semantic == 1
+        for (i,action) in enumerate(hist.action_hist)
+            as = NoCrashSemanticActionSpace(p).actions
+            actions[i] = find(as .== action)[1]
+        end
+    end
+    push!(log, actions) #Action number
+
+    #Also, make sure to be able to run scenarios with ref model by saving rng:s (not here!)
+    push!(log,[])
+    return log #Transpose to row vector
+end

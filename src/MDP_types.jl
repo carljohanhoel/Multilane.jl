@@ -96,7 +96,7 @@ struct MLAction
     lane_change::Float64 # ydot
     semantic::Float64
 end
-MLAction() = MLAction(0,0,0.0,0.0)
+MLAction() = MLAction(0.0,0.0,0.0)
 ==(a::MLAction,b::MLAction) = (a.acc==b.acc) && (a.lane_change==b.lane_change) && (a.semantic==b.semantic)
 Base.hash(a::MLAction,h::UInt64=zero(UInt64)) = hash(a.acc,hash(a.lane_change,hash(a.semantic,h)))
 function MLAction(x::Array{Float64,1})

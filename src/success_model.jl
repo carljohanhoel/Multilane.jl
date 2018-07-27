@@ -141,7 +141,8 @@ function MCTS.create_eval_log(p::Union{NoCrashMDP,NoCrashPOMDP,NoCrashPOMDP_lr},
     end
     push!(log, actions) #Action number
 
-    #Also, make sure to be able to run scenarios with ref model by saving rng:s (not here!)
-    push!(log,[])
+
+    write_to_png(visualize(p,hist.state_hist[1],0),"./tmpFigs/state_at_t0_i"*string(process_id-2)*".png")
+
     return log #Transpose to row vector
 end

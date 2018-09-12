@@ -72,7 +72,7 @@ end
 
 function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLState, D, SpeedReward} },
           s::MLState,
-          ::MLAction,
+          a::MLAction,
           sp::MLState) where D<:AbstractMLDynamicsModel
 
     v_ego = sp.cars[1].vel
@@ -82,7 +82,11 @@ function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{ML
     set_speed_penalty = abs((v_set-mdp.rmodel.v_des)/mdp.rmodel.v_des)
     r = 1 - speed_penalty - set_speed_penalty
 
-    if !isinteger(sp.cars[1].y)
+    # if !isinteger(sp.cars[1].y) #This punishes being between lanes. But no negative reward is given for the final step, stepping into a new lane (or returning to the original lane)
+    #     r -= mdp.rmodel.lane_change_cost
+    # end
+
+    if abs(a.lane_change) > 0.0
         r -= mdp.rmodel.lane_change_cost
     end
 

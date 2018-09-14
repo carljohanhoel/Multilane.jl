@@ -86,7 +86,7 @@ function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{ML
     #     r -= mdp.rmodel.lane_change_cost
     # end
 
-    if abs(a.lane_change) > 0.0
+    if abs(a.lane_change) > 0.0 && isinteger(s.cars[1].y)   #Only cost for lane change when initiating one. Then no more for finishing or aborting. (But could this cause problems with hesitation, changing back and forth? Maybe have cost for initiating and for changing direction? On the other hand, since there is a cost for initiating, there neeed to be a clear incentive to start a lane change, and to reach the goal. So should probably be fine as it is.)
         r -= mdp.rmodel.lane_change_cost
     end
 

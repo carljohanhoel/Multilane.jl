@@ -58,7 +58,7 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
         pp,
         behaviors,
         1., # adjustment accel
-        1.0/(4.0*pp.dt), # lane change rate
+        1.0/(2.0*pp.dt), # lane change rate
         p_appear, # p_appear
         35.0, # appear_clearance
         vel_sigma, # vel_sigma

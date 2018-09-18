@@ -631,6 +631,12 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         if !mdp.dmodel.fix_number_cars && nb_cars < mdp.dmodel.nb_cars && rand(rng) <= mdp.dmodel.p_appear
 
             behavior = rand(rng, mdp.dmodel.behaviors)
+            ##### ZZZ Test, reducing number of fast vehicles ####
+            while behavior.p_idm.v0 > sp.cars[1].vel && rand(rng) > 0.4
+            # while behavior.p_idm.v0 > sp.cars[1].vel && rand(rng) > 0.0
+                behavior = rand(rng, mdp.dmodel.behaviors)   #Generate new behavior if faster, in X% of the cases
+            end
+            #####################################################
             vel = typical_velocity(behavior) + randn(rng)*mdp.dmodel.vel_sigma
 
             clearances = Vector{Float64}(pp.nb_lanes)

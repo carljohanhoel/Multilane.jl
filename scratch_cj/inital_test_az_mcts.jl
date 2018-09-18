@@ -4,11 +4,11 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-# parallel_version = true   #Test code in parallel mode
-parallel_version = false
+parallel_version = true   #Test code in parallel mode
+# parallel_version = false
 
-simple_run = true
-# simple_run = false
+# simple_run = true
+simple_run = false
 
 
 if parallel_version
@@ -60,15 +60,15 @@ if scenario == "continuous_driving"
 
     #Reward
     lambda = 0.0
-    lane_change_cost = 1.0
+    lane_change_cost = 1.0 #*0.1
 
-    nb_lanes = 3
+    nb_lanes = 4
     lane_length = 600.
     nb_cars = 20
     sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
     @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
 
-    initSteps = 200   #To create initial random state
+    initSteps = 150   #To create initial random state
 
     v_des = 25.0
 
@@ -91,6 +91,11 @@ end
 @show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
+
+############# TEST ##############
+behaviors.max_mobil = MOBILParam(0.0, behaviors.max_mobil[2], behaviors.max_mobil[3])   #Sets politeness factor to 0 for all vehicles.
+#################################
+
 pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range, obs_behaviors=obs_behaviors)
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
@@ -174,7 +179,7 @@ else
     episode_length = 200
     replay_memory_max_size = 10000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
     training_start = 5000
-    training_steps = Int(ceil(10000000/n_workers))
+    training_steps = Int(ceil(100000000/n_workers))
     n_network_updates_per_sample = 1
     # save_freq = Int(ceil(5000/n_workers))
     # eval_freq = Int(ceil(5000/n_workers))

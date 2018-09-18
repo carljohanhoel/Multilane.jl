@@ -42,14 +42,15 @@ DEBUG = true #Debugging is also controlled from debug.jl
 @show n_iters = 2000 #10000   #C 1000
 max_time = Inf
 max_depth = 20 #60   #C 20
-@show c_uct = 5. #2.0   #C 5.0
-k_state = 3. #4.0 #0.2, #C 4.0,
-alpha_state = 0.2 #1/8.0 #0.0, #C 1/8.0,
+@show c_uct = 2.0   #C 5.0
+k_state = 4.0 #0.2, #C 4.0,
+alpha_state = 1/8.0 #0.0, #C 1/8.0,
 # @show val = SimpleSolver()
 alldata = DataFrame()
 
 
 @show scenario = "continuous_driving"
+# @show problem_type = "pomdp"
 @show problem_type = "mdp"
 
 ## Problem definition
@@ -124,6 +125,12 @@ elseif scenario == "forced_lane_changes" #ZZZ deprecated
     rollout_policy = SimpleSolver()
 end
 
+idle_problem = deepcopy(problem)
+idle_problem.dmodel.semantic_actions = false
+idle_problem.dmodel.max_dist = Inf
+idle_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 1000000), 1) #Very high acc gain treshold means no lane changes
+idle_policy = Multilane.DeterministicBehaviorPolicy(idle_problem, idle_behavior, false)
+
 dpws = DPWSolver(depth=max_depth,
                  n_iterations=n_iters,
                  max_time=max_time,
@@ -180,7 +187,7 @@ s_initial = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random 
 #                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
 #                                 CarState(pp.lane_length/2, 2, pp.v_med, 0.0, Multilane.TIMID, 1)])
 s_initial = set_ego_behavior(s_initial, ego_acc)
-write_to_png(visualize(sim_problem,s_initial,0),"./Figs/state_at_t0_i"*string(i)*".png")
+write_to_png(visualize(sim_problem,s_initial,0),"./Figs/ref_model_state_at_t0_i"*string(i)*".png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
 o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
@@ -193,6 +200,7 @@ metadata = Dict(:rng_seed=>rng_seed, #Not used now
            )
 hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=true)
 hr_ref = HistoryRecorder(max_steps=200, rng=deepcopy(rng), capture_exception=false, show_progress=true)
+hr_idle = HistoryRecorder(max_steps=200, rng=deepcopy(rng), capture_exception=false, show_progress=true)
 
 ##
 
@@ -203,26 +211,29 @@ if sim_problem isa POMDP
         srand(planner, rng_seed+60000)   #Sets rng seed of planner
         # hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
         hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
-        # # hist = simulate(hr, sim_problem, planner, updater, initial_belief, initial_state)
+        hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
     else
         updater = LimitedRangeUpdater()
         planner = deepcopy(solve(solver, sim_problem))
         srand(planner, rng_seed+60000)   #Sets rng seed of planner
         # hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
         hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
-        # hist
+        hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
     end
 else
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
     # hist = simulate(hr, sim_problem, planner, s_initial)
     hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
+    hist_idle = simulate(hr_idle, sim_problem, idle_policy, s_initial)
 end
 
 # @show sum(hist.reward_hist)
 @show sum(hist_ref.reward_hist)
+@show sum(hist_idle.reward_hist)
 # @show hist.state_hist[end].x
 @show hist_ref.state_hist[end].x
+@show hist_idle.state_hist[end].x
 
 
 # end
@@ -250,8 +261,18 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/refModel_i"*string(i)*"_ref.ogv"
+gifname = "./Figs/refModel_i"*string(i)*".ogv"
 write(gifname, frames)
+
+#Idle model
+frames = Frames(MIME("image/png"), fps=10/pp.dt)
+@showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
+    push!(frames, visualize(problem, s, r))
+end
+gifname = "./Figs/idleModel_i"*string(i)*".ogv"
+write(gifname, frames)
+
+
 
 end
 

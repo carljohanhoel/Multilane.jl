@@ -212,8 +212,9 @@ else
    estimator = NNEstimator(rng_estimator, estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
 end
 
-load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180727_013135_driving_20_workers_eval_every_episode/1001")
-
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180727_013135_driving_20_workers_eval_every_episode/1001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180727_180659_driving_20_workers_eval_every_episode_fixed/61201")
+load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180914_114955_driving_20_workers_Eval_5_eps_Lane_penalty_start_Two_steps_per_change/5001")
 
 azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
                k_state=3.,
@@ -282,11 +283,11 @@ else
     # train(trainer, hr, problem, policy)
 end
 
-policy = solve(solver,sim_problem)
-srand(policy, rng_seed+5)
+policy = solve(solver,sim_problem)   #Not used
+srand(policy, rng_seed+5)   #Not used
 
 #Possibly add loop here, loop over i
-i=1
+i=4
 rng_base_seed = 15
 rng_seed = 100*(i-1)+rng_base_seed
 rng = MersenneTwister(rng_seed)
@@ -294,24 +295,25 @@ s_initial = initial_state(sim_problem, rng, initSteps=initSteps)
 s_initial = set_ego_behavior(s_initial, ego_acc)
 o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
 
-policy.training_phase = false   #if false, evaluate trained agent, no randomness in action choices
-
 ##
 if sim_problem isa POMDP
     if solver isa MLMPCSolver
         updater = make_updater(cor, sim_problem, rng_seed)
         planner = deepcopy(solve(solver, sim_problem))
         srand(planner, rng_seed+60000)   #Sets rng seed of planner
+        planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS
         hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
     else
         updater = LimitedRangeUpdater()
         planner = deepcopy(solve(solver, sim_problem))
         srand(planner, rng_seed+60000)   #Sets rng seed of planner
+        planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS
         hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
     end
 else
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
+    planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS
     hist = simulate(hr, sim_problem, planner, s_initial)
 end
 
@@ -321,7 +323,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 0.0
+t = 148.5
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 print(hist.action_hist[step])

@@ -39,7 +39,7 @@ DEBUG = true #Debugging is also controlled from debug.jl
 
 #Solver parameters
 # @show N = 1000
-@show n_iters = 1000 #10000   #C 1000
+@show n_iters = 2000 #10000   #C 1000
 max_time = Inf
 max_depth = 20 #60   #C 20
 @show c_uct = 2.0   #C 5.0
@@ -50,7 +50,8 @@ alldata = DataFrame()
 
 
 @show scenario = "continuous_driving"
-@show problem_type = "pomdp"
+# @show problem_type = "pomdp"
+@show problem_type = "mdp"
 
 ## Problem definition
 if scenario == "continuous_driving"
@@ -169,17 +170,19 @@ sim_problem.throw=true
 
 ## Run simulations
 
-# N = 25
-# for i in 1:N
-i = 1
-rng_seed = i+40001
+N = 25
+for i in 1:N
+# i = 1
+# rng_seed = i+40001
+rng_base_seed = 15
+rng_seed = 100*(i-1)+rng_base_seed
 rng = MersenneTwister(rng_seed)
 s_initial = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 # is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
 #                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
 #                                 CarState(pp.lane_length/2, 2, pp.v_med, 0.0, Multilane.TIMID, 1)])
 s_initial = set_ego_behavior(s_initial, ego_acc)
-write_to_png(visualize(sim_problem,s_initial,0),"./Figs/state_at_t0_i"*string(i)*".png")
+write_to_png(visualize(sim_problem,s_initial,0),"./Figs/MCTS_state_at_t0_i"*string(i)*".png")
 #ZZZ Line below is temp, just to start with simple initial state
 # is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
 o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
@@ -226,7 +229,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 4.5
+t = 2.250
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 print(hist.action_hist[step])
@@ -250,7 +253,7 @@ end
 gifname = "./Figs/testMCTS_i"*string(i)*"_ref.ogv"
 write(gifname, frames)
 
-# end
+end
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

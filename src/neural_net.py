@@ -6,6 +6,7 @@ import numpy as np
 import random
 import time
 import os
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'   #Deactivates GPU support (to be tested...)
 
 from keras.models import Model, load_model
 from keras.layers import Activation, BatchNormalization, Dense, Flatten, Input, Reshape, concatenate, Lambda, Conv1D, MaxPooling1D

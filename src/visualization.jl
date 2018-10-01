@@ -67,6 +67,47 @@ function visualize(p, s, r; tree=nothing)
     render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
 end
 
+function visualize_with_nn(p, s, r, values, distributions; tree=nothing)
+    pp = p.dmodel.phys_param
+    stuff = []
+    roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
+    push!(stuff, roadway)
+    str = @sprintf("t: %6.2f\nx: %6.2f\nvel: %6.2f", s.t, s.x, s.cars[1].vel)
+    if r != nothing
+        str *= @sprintf("\nr: %6.2f", r)
+    end
+    if typeof(s.cars[1].behavior) == ACCBehavior
+        str *= @sprintf("\nv_set: %6.2f\nT_set: %6.2f", s.cars[1].behavior.p_idm.v0, s.cars[1].behavior.p_idm.T)
+    end
+    str *= @sprintf("\nvalues: ")
+    for i in 1:7
+        str *= @sprintf("%6.2f ", values[8-i])
+    end
+    for j in 1:7
+        str *= @sprintf("\n")
+        str *= @sprintf("%6.2f %6.2f %6.2f %6.2f %6.2f", distributions[8-j,1], distributions[8-j,2], distributions[8-j,3], distributions[8-j,4], distributions[8-j,5])
+    end
+    push!(stuff, str)
+    if tree != nothing
+        # push!(stuff, RelativeRender(tree, s.t, s.cars[1].vel))
+        # use the velocity at the root so it doesn't move
+        v = tree.node.tree.root_belief.physical.cars[1].vel
+        push!(stuff, RelativeRender(tree, s.t, v))
+    end
+    for (i,c) in enumerate(s.cars)
+        if i == 1
+            color = colorant"green"
+        else
+            agg = aggressiveness(Multilane.STANDARD_CORRELATED, c.behavior)
+            color = weighted_color_mean(agg, colorant"red", colorant"blue")
+        end
+        ac = ArrowCar([c.x+s.x, (c.y-1.0)*pp.w_lane], id=i, color=color)
+        push!(stuff, ac)
+    end
+
+    render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
+end
+
 # start with just lines
 
 struct RelativeRender{T} <: Renderable

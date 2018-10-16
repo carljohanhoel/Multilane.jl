@@ -1,7 +1,6 @@
 # ZZZ Removed precompilation of Multilane, not sure what that means
 
 push!(LOAD_PATH,joinpath("./src"))
-#include("../src/Multilane.jl")   #ZZZ This may be needed...
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
@@ -183,7 +182,7 @@ sim_problem.throw=true
 
 N = 20
 for i in 1:N
-# i = 1
+# i = 7
 rng_base_seed = 15
 rng_seed = 100*(i-1)+rng_base_seed
 rng = MersenneTwister(rng_seed)
@@ -214,32 +213,41 @@ if sim_problem isa POMDP
         updater = make_updater(cor, sim_problem, rng_seed)
         planner = deepcopy(solve(solver, sim_problem))
         srand(planner, rng_seed+60000)   #Sets rng seed of planner
-        # hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
         hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
         hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
     else
         updater = LimitedRangeUpdater()
         planner = deepcopy(solve(solver, sim_problem))
         srand(planner, rng_seed+60000)   #Sets rng seed of planner
-        # hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
         hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
         hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
     end
 else
     planner = deepcopy(solve(solver, sim_problem))
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    # hist = simulate(hr, sim_problem, planner, s_initial)
+    hist = simulate(hr, sim_problem, planner, s_initial)
     hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
     hist_idle = simulate(hr_idle, sim_problem, idle_policy, s_initial)
 end
 
-# @show sum(hist.reward_hist)
+@show sum(hist.reward_hist)
 @show sum(hist_ref.reward_hist)
 @show sum(hist_idle.reward_hist)
-# @show hist.state_hist[end].x
+@show hist.state_hist[end].x
 @show hist_ref.state_hist[end].x
 @show hist_idle.state_hist[end].x
 
+open("./Logs/dpwAndRefAndIdleModelsDistance.txt","a") do f
+    # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+    writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+end
+
+# open("./Logs/refModelResults2_.txt","a") do f
+#     writedlm(f, [[sum(hist_ref.reward_hist)]], " ")
+#     writedlm(f, [[hist_ref.state_hist[end].x]], " ")
+# end
 
 # end
 #
@@ -253,13 +261,14 @@ end
 # # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
 #
-# #Produce video
-# frames = Frames(MIME("image/png"), fps=10/pp.dt)
-# @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
-#     push!(frames, visualize(problem, s, r))
-# end
-# gifname = "./Figs/testMCTS_i"*string(i)*".ogv"
-# write(gifname, frames)
+#Produce video
+frames = Frames(MIME("image/png"), fps=10/pp.dt)
+@showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
+    push!(frames, visualize(problem, s, r))
+end
+gifname = "./Figs/dpw_i"*string(i)*".ogv"
+write(gifname, frames)
+
 
 #Reference model
 frames = Frames(MIME("image/png"), fps=10/pp.dt)
@@ -268,7 +277,7 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 end
 gifname = "./Figs/refModel_i"*string(i)*".ogv"
 write(gifname, frames)
-
+#
 #Idle model
 frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")

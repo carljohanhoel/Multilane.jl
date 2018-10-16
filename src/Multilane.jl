@@ -221,6 +221,7 @@ if true #ZZZ Always include visualization. May remove this later.
     export
         interp_state,
         visualize,
+        visualize_with_nn,
         make_rollouts,
         NodeWithRollouts
     # export

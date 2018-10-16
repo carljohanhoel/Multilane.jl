@@ -629,6 +629,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
         #=====================#
 
         if !mdp.dmodel.fix_number_cars && nb_cars < mdp.dmodel.nb_cars && rand(rng) <= mdp.dmodel.p_appear
+        # if !mdp.dmodel.fix_number_cars && nb_cars < 1 && rand(rng) <= mdp.dmodel.p_appear
 
             behavior = rand(rng, mdp.dmodel.behaviors)
             ##### ZZZ Test, reducing number of fast vehicles ####

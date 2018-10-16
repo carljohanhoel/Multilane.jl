@@ -53,22 +53,21 @@ using D3Trees
 @show scenario = "continuous_driving"
 @show problem_type = "mdp"
 
-
 ## Problem definition
 if scenario == "continuous_driving"
     cor = 0.75
 
     #Reward
     lambda = 0.0
-    lane_change_cost = 1.0
+    lane_change_cost = 0.01 #1.0
 
-    nb_lanes = 3
+    nb_lanes = 4
     lane_length = 600.
     nb_cars = 20
     sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
     @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
 
-    initSteps = 200   #To create initial random state
+    initSteps = 150   #To create initial random state
 
     v_des = 25.0
 
@@ -91,6 +90,11 @@ end
 @show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
+
+############# TEST ##############
+behaviors.max_mobil = MOBILParam(0.0, behaviors.max_mobil[2], behaviors.max_mobil[3])   #Sets politeness factor to 0 for all vehicles.
+#################################
+
 pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range, obs_behaviors=obs_behaviors)
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
@@ -115,7 +119,7 @@ elseif problem_type == "pomdp"
     end
 end
 
-##DPW solver parameters (not used for AZ!)
+##DPW solver parameters (not used for AZ!)!!!!!!!!!!!
 @show n_iters = 1000 #10000   #C 1000
 max_time = Inf
 max_depth = 20 #60   #C 20
@@ -152,7 +156,7 @@ dpws = DPWSolver(depth=max_depth,
 
 @show n_iter = 2000
 depth = 20 #ZZZ not used
-@show c_puct = 5.
+@show c_puct = 0.1 #1. #5.
 @show tau = 1.1
 @show stash_factor = 1.5
 @show noise_dirichlet = 1.0
@@ -174,7 +178,7 @@ else
     episode_length = 200
     replay_memory_max_size = 10000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
     training_start = 5000
-    training_steps = Int(ceil(10000000/n_workers))
+    training_steps = Int(ceil(100000000/n_workers))
     n_network_updates_per_sample = 1
     # save_freq = Int(ceil(5000/n_workers))
     # eval_freq = Int(ceil(5000/n_workers))
@@ -214,12 +218,23 @@ end
 
 # load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180727_013135_driving_20_workers_eval_every_episode/1001")
 # load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180727_180659_driving_20_workers_eval_every_episode_fixed/61201")
-load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180914_114955_driving_20_workers_Eval_5_eps_Lane_penalty_start_Two_steps_per_change/5001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180914_114955_driving_20_workers_Eval_5_eps_Lane_penalty_start_Two_steps_per_change/5001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180918_142056_driving_20_workers_Eval_5_eps_New_scenarios/8001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180921_160842_driving_20_workers_Eval_5_eps_New_scenarios_1puct_Q_init_v0/8001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180924_175301_driving_20_workers_Eval_5_eps_New_scenarios_1puct_Q_init_v0_No_branching_1_0/1001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180925_131535_driving_20_workers_Eval_5_eps_New_scenarios_1puct_Q_init_v0_No_branching_Change_penalty_0p01/1001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180926_174518_driving_20_workers_Eval_5_eps_New_scenarios_1puct_Q_init_v0_No_branching_Change_penalty_0p01/1001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180927_152157_driving_20_worker_etc_Change_pen_0p01_Loss_weights_1_1000/5001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/181002_121926_driving_20_worker_etc_Change_pen_0p01_Loss_weights_1_1000_fixed/8001")
+# load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/181002_143554_driving_20_worker_etc_Change_pen_0p01_Loss_weights_1_1000_Only_z_target/8001")
+load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/181012_150851_driving_20_worker_etc_Change_pen_0p01_Loss_weights_1_10_Cpuct_0p1/3001")
+
+# estimator.debug_with_uniform_nn_output = true
 
 azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
-               k_state=3.,
+               k_state=1., #3.,
                tree_in_info=true,
-               alpha_state=0.2,
+               alpha_state=0., #0.2,
                tau=tau,
                enable_action_pw=false,
                check_repeat_state=false,
@@ -287,7 +302,7 @@ policy = solve(solver,sim_problem)   #Not used
 srand(policy, rng_seed+5)   #Not used
 
 #Possibly add loop here, loop over i
-i=4
+i=8
 rng_base_seed = 15
 rng_seed = 100*(i-1)+rng_base_seed
 rng = MersenneTwister(rng_seed)
@@ -323,7 +338,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 148.5
+t = 3.0
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
 print(hist.action_hist[step])

@@ -53,18 +53,17 @@ using D3Trees
 @show scenario = "continuous_driving"
 @show problem_type = "mdp"
 
-
 ## Problem definition
 if scenario == "continuous_driving"
     cor = 0.75
 
     #Reward
-    lambda = 0.0
-    lane_change_cost = 1.0 #*0.1
+    lambda = 0.0  #Penalty for making other vehicles brake hard
+    lane_change_cost = 0.01 #0.1 #0.01 #1.0 #*0.1
 
     nb_lanes = 4
     lane_length = 600.
-    nb_cars = 20
+    nb_cars = 20     #Number of vehicles, including ego vehicle
     sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
     @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
 
@@ -120,7 +119,7 @@ elseif problem_type == "pomdp"
     end
 end
 
-##DPW solver parameters (not used for AZ!)
+##DPW solver parameters (not used for AZ!)!!!!!!!!!!!
 @show n_iters = 1000 #10000   #C 1000
 max_time = Inf
 max_depth = 20 #60   #C 20
@@ -157,7 +156,7 @@ dpws = DPWSolver(depth=max_depth,
 
 @show n_iter = 2000
 depth = 20 #ZZZ not used
-@show c_puct = 5.
+@show c_puct = 0.1 #1. #5.
 @show tau = 1.1
 @show stash_factor = 1.5
 @show noise_dirichlet = 1.0
@@ -169,24 +168,28 @@ if simple_run
     training_start = 100
     training_steps = Int(ceil(1000/n_workers))*1000
     n_network_updates_per_sample = 1
+    remove_end_samples = 2
     # save_freq = Int(ceil(100/n_workers))
     # eval_freq = Int(ceil(100/n_workers))
     # eval_eps = Int(ceil(2/n_workers))
-    save_freq = 5*episode_length
-    eval_freq = 5*episode_length
+    save_freq = 1*episode_length
+    eval_freq = 1*episode_length
     eval_eps = 1
+    save_evaluation_history = true
 else
     episode_length = 200
-    replay_memory_max_size = 10000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
+    replay_memory_max_size = 20000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
     training_start = 5000
     training_steps = Int(ceil(100000000/n_workers))
     n_network_updates_per_sample = 1
+    remove_end_samples = 10
     # save_freq = Int(ceil(5000/n_workers))
     # eval_freq = Int(ceil(5000/n_workers))
     # eval_eps = Int(ceil(5/n_workers))
     save_freq = 5*episode_length
     eval_freq = 5*episode_length
     eval_eps = 1
+    save_evaluation_history = true
 end
 rng = MersenneTwister(13)
 
@@ -217,10 +220,12 @@ else
    estimator = NNEstimator(rng_estimator, estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
 end
 
+#load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180927_152157_driving_20_worker_etc_Change_pen_0p01_Loss_weights_1_1000/5001")
+
 azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
-               k_state=3.,
+               k_state=1., #3.,
                tree_in_info=false,
-               alpha_state=0.2,
+               alpha_state=0., #0.2,
                tau=tau,
                enable_action_pw=false,
                check_repeat_state=false,
@@ -294,14 +299,14 @@ end
 mkdir(log_path*"/code")
 cp(pwd()*"/test/",log_path*"/code/test/")
 cp(pwd()*"/src/",log_path*"/code/src/")
-cp(pwd()*"/scratch_18_04/",log_path*"/code/scratch_18_04/")
+cp(pwd()*"/scratch_cj/",log_path*"/code/scratch_cj/")
 cp(estimator_path*".py",log_path*"/neural_net.py")
 
 ##
 trainer = Trainer(rng=rng_trainer, rng_eval=rng_evaluator, training_steps=training_steps,
                   n_network_updates_per_sample=n_network_updates_per_sample, save_freq=save_freq,
-                  eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, stash_factor=stash_factor,
-                  show_progress=true, log_dir=log_path)
+                  eval_freq=eval_freq, eval_eps=eval_eps, fix_eval_eps=true, remove_end_samples=remove_end_samples,
+                  stash_factor=stash_factor, save_evaluation_history=save_evaluation_history, show_progress=true, log_dir=log_path)
 if parallel_version
    if sim_problem isa POMDP
       processes = train_parallel(trainer, hr, problem, policy, updater)

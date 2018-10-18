@@ -58,7 +58,7 @@ if scenario == "continuous_driving"
 
     #Reward
     lambda = 0.0
-    lane_change_cost = 1.0
+    lane_change_cost = 0.01 #1.0
 
     nb_lanes = 4
     lane_length = 600.

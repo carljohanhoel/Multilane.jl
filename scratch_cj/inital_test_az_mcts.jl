@@ -4,11 +4,11 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-parallel_version = true   #Test code in parallel mode
-# parallel_version = false
+# parallel_version = true   #Test code in parallel mode
+parallel_version = false
 
-# simple_run = true
-simple_run = false
+simple_run = true
+# simple_run = false
 
 
 if parallel_version
@@ -48,46 +48,7 @@ using D3Trees
 
 ##
 
-
-
-@show scenario = "continuous_driving"
-@show problem_type = "mdp"
-
-## Problem definition
-if scenario == "continuous_driving"
-    cor = 0.75
-
-    #Reward
-    lambda = 0.0  #Penalty for making other vehicles brake hard
-    lane_change_cost = 0.01 #0.1 #0.01 #1.0 #*0.1
-
-    nb_lanes = 4
-    lane_length = 600.
-    nb_cars = 20     #Number of vehicles, including ego vehicle
-    sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
-    @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
-
-    initSteps = 150   #To create initial random state
-
-    v_des = 25.0
-
-    rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, lambda=lambda)
-elseif scenario == "forced_lane_changes" #ZZZ deprecated
-    cor = 0.75
-    lambda = 1.0
-
-    nb_lanes = 4
-    lane_length = 100.
-    nb_cars = 10
-
-    initSteps = 200
-
-    v_des = 35.0
-    rmodel = SuccessReward(lambda=lambda)
-end
-
-@show cor
-@show lambda
+include("parameters.jl")
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
 
@@ -119,15 +80,6 @@ elseif problem_type == "pomdp"
     end
 end
 
-##DPW solver parameters (not used for AZ!)!!!!!!!!!!!
-@show n_iters = 1000 #10000   #C 1000
-max_time = Inf
-max_depth = 20 #60   #C 20
-@show c_uct = 2.0   #C 5.0
-k_state = 4.0 #0.2, #C 4.0,
-alpha_state = 1/8.0 #0.0, #C 1/8.0,
-# @show val = SimpleSolver()
-alldata = DataFrame()
 
 # Solver definition
 if scenario == "continuous_driving"
@@ -140,60 +92,9 @@ elseif scenario == "forced_lane_changes"
     rollout_policy = SimpleSolver()
 end
 
-dpws = DPWSolver(depth=max_depth,
-                 n_iterations=n_iters,
-                 max_time=max_time,
-                 exploration_constant=c_uct,
-                 k_state=k_state,
-                 alpha_state=alpha_state,
-                 enable_action_pw=false,
-                 check_repeat_state=false,
-                 estimate_value=RolloutEstimator(rollout_policy),
-                 # estimate_value=val
-                 tree_in_info = false
-                )
 
 
-@show n_iter = 2000
-depth = 20 #ZZZ not used
-@show c_puct = 0.1 #1. #5.
-@show tau = 1.1
-@show stash_factor = 1.5
-@show noise_dirichlet = 1.0
 
-if simple_run
-    episode_length = 20
-    n_iter = 20
-    replay_memory_max_size = 200
-    training_start = 100
-    training_steps = Int(ceil(1000/n_workers))*1000
-    n_network_updates_per_sample = 1
-    remove_end_samples = 2
-    # save_freq = Int(ceil(100/n_workers))
-    # eval_freq = Int(ceil(100/n_workers))
-    # eval_eps = Int(ceil(2/n_workers))
-    save_freq = 1*episode_length
-    eval_freq = 1*episode_length
-    eval_eps = 1
-    save_evaluation_history = true
-else
-    episode_length = 200
-    replay_memory_max_size = 20000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
-    training_start = 5000
-    training_steps = Int(ceil(100000000/n_workers))
-    n_network_updates_per_sample = 1
-    remove_end_samples = 10
-    # save_freq = Int(ceil(5000/n_workers))
-    # eval_freq = Int(ceil(5000/n_workers))
-    # eval_eps = Int(ceil(5/n_workers))
-    save_freq = 5*episode_length
-    eval_freq = 5*episode_length
-    eval_eps = 1
-    save_evaluation_history = true
-end
-rng = MersenneTwister(13)
-
-rng_seed = 13
 rng_estimator=MersenneTwister(rng_seed+1)
 rng_evaluator=MersenneTwister(rng_seed+2)
 rng_solver=MersenneTwister(rng_seed+3)
@@ -223,17 +124,17 @@ end
 #load_network(estimator,"/home/cj/2018/Stanford/Code/Multilane.jl/Logs/180927_152157_driving_20_worker_etc_Change_pen_0p01_Loss_weights_1_1000/5001")
 
 azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
-               k_state=1., #3.,
+               k_state=k_state,
                tree_in_info=false,
-               alpha_state=0., #0.2,
+               alpha_state=alpha_state,
                tau=tau,
                enable_action_pw=false,
                check_repeat_state=false,
                rng=rng_solver,
                estimate_value=estimator,
                init_P=estimator,
-               noise_dirichlet = noise_dirichlet,
-               noise_eps = 0.25
+               noise_dirichlet=noise_dirichlet,
+               noise_eps=noise_eps
                )
 
 

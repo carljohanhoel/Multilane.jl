@@ -22,7 +22,7 @@ write_to_png(visualize(ll["mdp"],ll["s"],0.0),"./Figs/tmp_dbg.png")
 
 
 #Code for loading saved evaluation history, visualizing MCTS tree and producing video
-hist_loaded = JLD.load("./Logs/181015_170852_/eval_hist_process_1_step_37.jld")
+hist_loaded = JLD.load("./Logs/181016_093809_driving_Change_pen_0p01_Loss_weights_1_10_Cpuct_0p1_Remove_10_samples_Only_z_target_No_vehicles/eval_hist_process_3_step_191.jld")
 hist_loaded = hist_loaded["hist"]
 
 

@@ -36,7 +36,7 @@ class ReplayMemory():
         self.training_start = training_start
 
 class NeuralNetwork:
-    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.00001, loss_weights=[1, 10], lr=1e-2, debug=False):
+    def __init__(self, N_inputs, N_outputs, replay_memory_max_size, training_start, log_path="./", batch_size=32, c=0.0001, loss_weights=[1, 100], lr=1e-2, debug=False):
         self.N_inputs = N_inputs
         self.N_outputs = N_outputs
         self.batch_size = batch_size
@@ -106,7 +106,8 @@ class NeuralNetwork:
         conv_net2 = Conv1D(N_conv_filters, 1, strides=1, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(conv_net)
         conv_net2 = BatchNormalization()(conv_net2)
         conv_net2 = Activation(activation='relu')(conv_net2)
-        pool = MaxPooling1D(pool_size=1, strides=N_conv_filters)(conv_net2)
+        #pool = MaxPooling1D(pool_size=1, strides=N_conv_filters)(conv_net2) #This was a previous bug. Pool size should be N_vehicles.
+        pool = MaxPooling1D(pool_size=N_vehicles)(conv_net2)
         conv_net_out = Reshape((N_conv_filters,),input_shape=(1,N_conv_filters,))(pool)
 
         merged = concatenate([state_ego, conv_net_out])
@@ -132,6 +133,9 @@ class NeuralNetwork:
                                        embeddings_metadata=None)
         self.tf_callback.set_model(self.model)
 
+        #self.intermediate_layers = {}
+        #for i in range(0,20):
+        #    self.intermediate_layers[i] = Model(inputs=self.model.input, outputs=self.model.get_layer(index=i).output)
 
     def add_samples_to_memory(self, states, dists, vals):
         idx = self.rm.write_idx

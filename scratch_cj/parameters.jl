@@ -7,7 +7,7 @@ if scenario == "continuous_driving"
 
     #Reward
     lambda = 0.0  #Penalty for making other vehicles brake hard
-    lane_change_cost = 0.01 #0.1 #0.01 #1.0 #*0.1
+    lane_change_cost = 0.03 #0.01 #0.1 #0.01 #1.0 #*0.1
 
     nb_lanes = 4
     lane_length = 600.
@@ -53,7 +53,7 @@ if simple_run
     replay_memory_max_size = 200
     training_start = 100
     training_steps = Int(ceil(1000/n_workers))*1000
-    n_network_updates_per_sample = 1
+    n_network_updates_per_sample = 3
     remove_end_samples = 2
     # save_freq = Int(ceil(100/n_workers))
     # eval_freq = Int(ceil(100/n_workers))
@@ -67,7 +67,7 @@ else
     replay_memory_max_size = 20000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
     training_start = 5000
     training_steps = Int(ceil(100000000/n_workers))
-    n_network_updates_per_sample = 1
+    n_network_updates_per_sample = 3
     remove_end_samples = 10
     # save_freq = Int(ceil(5000/n_workers))
     # eval_freq = Int(ceil(5000/n_workers))

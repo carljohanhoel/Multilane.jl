@@ -7,11 +7,11 @@ using Revise #To allow recompiling of modules withhout restarting julia
 # parallel_version = true   #Test code in parallel mode
 parallel_version = false
 
-simple_run = true
-# simple_run = false
+# simple_run = true
+simple_run = false
 
-sample_to_load = "91"
-network_to_load = "181017_103431_"
+sample_to_load = "541"
+network_to_load = "181024_153240_"
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 
 if parallel_version
@@ -215,9 +215,10 @@ test_state = rec_states[step]
 acc = test_state.cars[1].behavior.p_idm
 acc2 = [value for (idx,value) in enumerate(acc)]
 # acc2[4] = 24.0
-# acc2[3] = 0.5
+acc2[3] = 0.5
 test_state.cars[1] = CarState(test_state.cars[1].x,test_state.cars[1].y,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
-# test_state.cars[1] = CarState(test_state.cars[1].x,4.0,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
+# test_state.cars[1] = CarState(test_state.cars[1].x,3.0,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
+# test_state.cars[1] = CarState(test_state.cars[1].x,3.5,test_state.cars[1].vel,1.0, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
 
 #Run MCTS
 policy.training_phase = false #Remove Dirichlet noise on prior probabilities

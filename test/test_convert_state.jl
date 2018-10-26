@@ -8,7 +8,7 @@ using POMDPs
 using POMDPModels
 using POMDPToolbox
 
-nb_lanes = 3
+nb_lanes = 4
 lane_length = 300.
 nb_cars = 20
 
@@ -34,7 +34,7 @@ mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 rng = MersenneTwister(3)
 ego_acc = ACCBehavior(ACCParam(v_des), 1)
 
-initSteps = 1000
+initSteps = 100
 is = initial_state(mdp, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
 is = set_ego_behavior(is, ego_acc)
 

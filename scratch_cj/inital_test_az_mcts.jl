@@ -4,11 +4,11 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-# parallel_version = true   #Test code in parallel mode
-parallel_version = false
+parallel_version = true   #Test code in parallel mode
+# parallel_version = false
 
-simple_run = true
-# simple_run = false
+# simple_run = true
+simple_run = false
 
 
 if parallel_version

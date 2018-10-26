@@ -7,11 +7,11 @@ using Revise #To allow recompiling of modules withhout restarting julia
 # parallel_version = true   #Test code in parallel mode
 parallel_version = false
 
-simple_run = true
-# simple_run = false
+# simple_run = true
+simple_run = false
 
-sample_to_load = "91"
-network_to_load = "181017_103431_"
+sample_to_load = "5131"
+network_to_load = "181016_141335_driving_Change_pen_0p01_Loss_weights_1_10_Cpuct_0p1_Remove_10_samples_Only_z_target"
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 
 if parallel_version
@@ -126,7 +126,7 @@ else
 end
 
 
-load_network(estimator,logs_path*network_to_load*"/"*sample_to_load)
+# load_network(estimator,logs_path*network_to_load*"/"*sample_to_load)
 
 # estimator.debug_with_uniform_nn_output = true
 
@@ -201,7 +201,7 @@ policy = solve(solver,sim_problem)   #Not used
 srand(policy, rng_seed+5)   #Not used
 
 #Possibly add loop here, loop over i
-i=8
+i=3
 rng_base_seed = 15
 rng_seed = 100*(i-1)+rng_base_seed
 rng = MersenneTwister(rng_seed)
@@ -226,6 +226,7 @@ if sim_problem isa POMDP
     end
 else
     planner = deepcopy(solve(solver, sim_problem))
+    # planner.solver.n_iterations = 1
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
     planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS
     hist = simulate(hr, sim_problem, planner, s_initial)
@@ -237,7 +238,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 3.0
+t = 144.0
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t"*string(t)*"_"*network_to_load*"_"*sample_to_load*".png")
 print(hist.action_hist[step])

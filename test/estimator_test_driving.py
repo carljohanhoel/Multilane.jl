@@ -23,6 +23,17 @@ print(dist_act)
 dist_act_single, _ = nn.forward_pass(np.expand_dims(state[0],0))
 assert(np.allclose(dist_act_single[0],dist_act[0]))   #There is a small difference when calling with a batch and when calling with a single vector. Does it matter?
 
+#Test maxpool, that vehicles are interchangeable
+test_state = np.random.rand(1,82)
+test_state2 = np.copy(test_state)
+test_state2[0,2:22] = test_state[0,62:82]
+test_state2[0,62:82] = test_state[0,2:22]
+t1 = nn.forward_pass(test_state)
+t2 = nn.forward_pass(test_state2)
+assert( (t1[0]== t2[0]).any() )
+assert( (t1[1]== t2[1]).any() )
+
+
 
 start_time = time.time()
 # Training

@@ -35,15 +35,16 @@ using D3Trees
 
 ##
 DEBUG = true #Debugging is also controlled from debug.jl
+start_time = Dates.format(Dates.now(), "yymmdd_HHMMSS_")
 
 #Solver parameters
 # @show N = 1000
 @show n_iters = 2000 #10000   #C 1000
 max_time = Inf
 max_depth = 20 #60   #C 20
-@show c_uct = 2.0   #C 5.0
-k_state = 4.0 #0.2, #C 4.0,
-alpha_state = 1/8.0 #0.0, #C 1/8.0,
+@show c_uct =0.1 # 2.0   #C 5.0
+k_state = 1.0 #4.0 #0.2, #C 4.0,
+alpha_state = 0.0 #1/8.0 #0.0, #C 1/8.0,
 # @show val = SimpleSolver()
 alldata = DataFrame()
 
@@ -58,7 +59,7 @@ if scenario == "continuous_driving"
 
     #Reward
     lambda = 0.0
-    lane_change_cost = 0.01 #1.0
+    lane_change_cost = 0.03 #0.01 #1.0
 
     nb_lanes = 4
     lane_length = 600.
@@ -239,7 +240,7 @@ end
 @show hist_ref.state_hist[end].x
 @show hist_idle.state_hist[end].x
 
-open("./Logs/dpwAndRefAndIdleModelsDistance.txt","a") do f
+open("./Logs/dpwAndRefAndIdleModelsDistance"*start_time*".txt","a") do f
     # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
     writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
 end
@@ -266,7 +267,7 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/dpw_i"*string(i)*".ogv"
+gifname = "./Figs/dpw_i"*string(i)*"_"*start_time*".ogv"
 write(gifname, frames)
 
 
@@ -275,7 +276,7 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/refModel_i"*string(i)*".ogv"
+gifname = "./Figs/refModel_i"*string(i)*"_"*start_time*".ogv"
 write(gifname, frames)
 #
 #Idle model
@@ -283,7 +284,7 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/idleModel_i"*string(i)*".ogv"
+gifname = "./Figs/idleModel_i"*string(i)*"_"*start_time*".ogv"
 write(gifname, frames)
 
 

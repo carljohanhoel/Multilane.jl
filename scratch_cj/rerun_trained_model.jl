@@ -10,8 +10,8 @@ parallel_version = false
 # simple_run = true
 simple_run = false
 
-sample_to_load = "5131"
-network_to_load = "181016_141335_driving_Change_pen_0p01_Loss_weights_1_10_Cpuct_0p1_Remove_10_samples_Only_z_target"
+sample_to_load = "2091"
+network_to_load = "181024_155209_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03_Update_3_times_per_sample"
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 
 if parallel_version
@@ -200,8 +200,10 @@ end
 policy = solve(solver,sim_problem)   #Not used
 srand(policy, rng_seed+5)   #Not used
 
-#Possibly add loop here, loop over i
-i=3
+##
+#Possibly add loop here, loop over process
+process = 6
+i=process-2
 rng_base_seed = 15
 rng_seed = 100*(i-1)+rng_base_seed
 rng = MersenneTwister(rng_seed)
@@ -226,7 +228,7 @@ if sim_problem isa POMDP
     end
 else
     planner = deepcopy(solve(solver, sim_problem))
-    # planner.solver.n_iterations = 1
+    planner.solver.n_iterations = 1
     srand(planner, rng_seed+60000)   #Sets rng seed of planner
     planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS
     hist = simulate(hr, sim_problem, planner, s_initial)
@@ -238,7 +240,7 @@ end
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 144.0
+t = 0.0
 step = convert(Int, t / pp.dt) + 1
 write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t"*string(t)*"_"*network_to_load*"_"*sample_to_load*".png")
 print(hist.action_hist[step])
@@ -251,5 +253,5 @@ frames = Frames(MIME("image/png"), fps=10/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/rerunAZ_i"*string(i)*"_"*network_to_load*"_"*sample_to_load*".ogv"
+gifname = "./Figs/rerunAZ_process_"*string(process)*"_"*network_to_load*"_"*sample_to_load*".ogv"
 write(gifname, frames)

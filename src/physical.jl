@@ -6,6 +6,8 @@ mutable struct PhysicalParam
 	dt::Float64
 	w_car::Float64
 	l_car::Float64
+    w_truck::Float64
+	l_truck::Float64
 	v_nominal::Float64
 	w_lane::Float64
 	v_fast::Float64
@@ -21,8 +23,10 @@ mutable struct PhysicalParam
 end
 
 function PhysicalParam(nb_lanes::Int;dt::Float64=0.75,
-						w_car::Float64=2.,
-						l_car::Float64=4.,
+						w_car::Float64=1.8,
+						l_car::Float64=4.8,
+                        w_truck::Float64=1.8,#2.5,
+						l_truck::Float64=4.8,#16.5,
 						v_nominal::Float64=25.,
 						w_lane::Float64=4.,
 						v_fast::Float64=30.56,
@@ -39,7 +43,7 @@ function PhysicalParam(nb_lanes::Int;dt::Float64=0.75,
 	assert(v_fast >= v_med)
 	assert(v_med >= v_slow)
 	assert(v_fast > v_slow)
-    return PhysicalParam(dt, w_car, l_car, v_nominal, w_lane, v_fast, v_slow, v_med, v_max, v_min, brake_limit, nb_lanes, lane_length, sensor_range, obs_behaviors)
+    return PhysicalParam(dt, w_car, l_car, w_truck, l_truck, v_nominal, w_lane, v_fast, v_slow, v_med, v_max, v_min, brake_limit, nb_lanes, lane_length, sensor_range, obs_behaviors)
 end
 
 """

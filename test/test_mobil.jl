@@ -139,38 +139,38 @@ function test_is_lanechange_dangerous()
 	assert(is_lanechange_dangerous(pp,s,nbhd,1,-1),false)
 
 	#CASE: person close by, same velocity
-	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),28),CarState(12.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),29)]
+	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),28),CarState(14.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),29)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,1)
 	assert(is_lanechange_dangerous(pp,s,nbhd,1,1),false)
 
 	#slightly behind
-	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),30),CarState(0.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),31)]
+	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),30),CarState(-2.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),31)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,1)
 	assert(is_lanechange_dangerous(pp,s,nbhd,1,1),false)
 	#CASE: person a little behind, slower
-	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),32),CarState(1.,3,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),33)]
+	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),32),CarState(-2.,3,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),33)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,1)
 	assert(is_lanechange_dangerous(pp,s,nbhd,1,1),false)
 	#CASE: person a little ahead, faster
-	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),34),CarState(1.,3,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),35)]
+	cs = CarState[CarState(6.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),34),CarState(-2.,3,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),35)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,2)
 	assert(is_lanechange_dangerous(pp,s,nbhd,2,-1),false)
 	#CASE: person a little behind, faster
-	cs = CarState[CarState(6.,2,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),36),CarState(1.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),37)]
+	cs = CarState[CarState(6.,2,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),36),CarState(-2.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),37)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,1)
 	assert(is_lanechange_dangerous(pp,s,nbhd,1,1),true)
 	#CASE: person a little ahead, slower
-	cs = CarState[CarState(6.,2,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),38),CarState(1.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),39)]
+	cs = CarState[CarState(6.,2,32.,0,IDMMOBILBehavior("aggressive",35.,4.,1),38),CarState(-2.,3,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),39)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,2)
@@ -229,8 +229,8 @@ function test_get_mobil_lane_change()
 	#CASE: it's faster, but there's no space--is this even a real case?
 	#CASE: it's faster and there is space
 	cs = CarState[CarState(12.,2,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),1),
-								CarState(11.,1,27.,0,IDMMOBILBehavior("cautious",27.,4.,1),2),
-								CarState(6.,1,31.,0,IDMMOBILBehavior("aggressive",35.,4.,1),3)]
+				  CarState(11.,1,27.,0,IDMMOBILBehavior("cautious",27.,4.,1),2),
+				  CarState(4.,1,31.,0,IDMMOBILBehavior("aggressive",35.,4.,1),3)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,3)
@@ -249,7 +249,7 @@ function test_get_mobil_lane_change()
 	assert(get_mobil_lane_change(s.cars[2].behavior,pp,s,nbhd,2),1)
 	###repeat for other side
 	#CASE: it's faster and there is space
-	cs = CarState[CarState(12.,1,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),9),CarState(11.,2,27.,0,IDMMOBILBehavior("cautious",27.,4.,1),10),CarState(6.,2,31.,0,IDMMOBILBehavior("aggressive",35.,4.,1),11)]
+	cs = CarState[CarState(12.,1,35.,0,IDMMOBILBehavior("aggressive",35.,4.,1),9),CarState(11.,2,27.,0,IDMMOBILBehavior("cautious",27.,4.,1),10),CarState(4.,2,31.,0,IDMMOBILBehavior("aggressive",35.,4.,1),11)]
 	dmodel = IDMMOBILModel(length(cs),pp)
 	s = MLState(0.0,0.0,cs)
 	nbhd = get_neighborhood(pp,s,3)

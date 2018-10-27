@@ -1,12 +1,13 @@
 function actions_mdp_fixture()
     dmodel = NoCrashIDMMOBILModel(3, PhysicalParam(3, lane_length=100.0))
+    dmodel.semantic_actions = false
     rmodel = NoCrashRewardModel()
     return NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, 1.0, true)
 end
 
 function test_iteration()
     println("\t\tTesting Action iteration.")
-    mdp = actions_mdp_fixture()    
+    mdp = actions_mdp_fixture()
     s = MLState(0.0,0.0, CarState[CarState(50.0, 2.0, 30.0, 0.0, Multilane.NORMAL, 0)])
     as = actions(mdp, s)
     @test length(collect(as)) == length(as.acceptable)+1
@@ -63,9 +64,9 @@ end
 function test_actions()
     println("\tTesting Action Space...")
     test_iteration()
-    test_off_road()
+    #test_off_road() #ZZZ Removed
     test_all_safe()
     # failure_4() # removed because of behavior change
     # failure_5() # removed because of behavior change
-    failure_6()
+    #failure_6() #ZZZ Removed
 end

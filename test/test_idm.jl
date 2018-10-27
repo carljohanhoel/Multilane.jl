@@ -58,7 +58,7 @@ function test_get_dv_ds()
 	for nbr = 1:6
 		dv, ds = get_dv_ds(pp,s,nbhd,1,nbr)
 		assert(dv,0.)
-		assert(ds,1000.)
+		assert(ds,1000000.)
 	end
 	#full house
 	cs = CarState[CarState(0.,1,27.,0,bs[1],1),
@@ -69,7 +69,8 @@ function test_get_dv_ds()
 								CarState(12.,3,35.,0,bs[1],6),
 								CarState(6.,2,31.,0,bs[1],7)]
 
-	_ds = 2.
+	#_ds = 2.
+	_ds = 6. - pp.l_car
 
 	dmodel = IDMMOBILModel(length(cs), pp)
 	s = MLState(0.0,0.0,cs)

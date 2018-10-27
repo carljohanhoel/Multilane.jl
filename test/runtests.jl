@@ -1,4 +1,6 @@
-push!(LOAD_PATH,joinpath("..","src"))
+#push!(LOAD_PATH,joinpath("..","src"))
+push!(LOAD_PATH,joinpath("./src"))
+
 using Multilane
 using Base.Test
 using POMDPs

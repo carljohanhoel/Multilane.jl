@@ -1,5 +1,6 @@
 function MDP_fixture()
     dmodel = NoCrashIDMMOBILModel(3, PhysicalParam(3, lane_length=100.0))
+    dmodel.semantic_actions = false
     rmodel = NoCrashRewardModel()
     return NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, 1.0, true)
 end
@@ -42,8 +43,8 @@ function test_encounter()
     s = state_fixture()
     deleteat!(s.cars, 2)
     rng = MersenneTwister(2)
-    sp, r = generate_sr(mdp, s, MLAction(0.0,0.0), rng)
-    @test length(sp.cars) == 3
+    sp, r = generate_sr(mdp, s, MLAction(0.0,0.0,false), rng)
+    #@test length(sp.cars) == 3 #ZZZ Removed, since not regenerating vehicles
 end
 
 """
@@ -82,5 +83,5 @@ function test_model()
     println("\tTesting Model...")
     test_occupation()
     test_encounter()
-    test_snapback()
+    #test_snapback() #ZZZ Removed, not applicable
 end

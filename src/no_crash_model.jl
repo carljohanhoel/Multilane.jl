@@ -611,9 +611,11 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 push!(exits, i)
             else
                 if i==1
-                    sp.cars[i] = CarState(xp, yp, velp, lcs[i], new_ego_behavior, s.cars[i].id)
+                    # sp.cars[i] = CarState(xp, yp, velp, lcs[i], new_ego_behavior, s.cars[i].id)
+                    sp.cars[i] = CarState(xp, yp, velp, !isinteger(yp) ? lcs[i] : 0., new_ego_behavior, s.cars[i].id)
                 else
-                    sp.cars[i] = CarState(xp, yp, velp, lcs[i], car.behavior, s.cars[i].id)
+                    # sp.cars[i] = CarState(xp, yp, velp, lcs[i], car.behavior, s.cars[i].id)
+                    sp.cars[i] = CarState(xp, yp, velp, !isinteger(yp) ? lcs[i] : 0., car.behavior, s.cars[i].id)
                 end
             end
         end

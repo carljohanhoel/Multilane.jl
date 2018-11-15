@@ -116,10 +116,10 @@ class NeuralNetwork:
         joint_net = BatchNormalization()(joint_net)
         joint_net = Activation(activation='relu')(joint_net)
 
-        dist = Dense(16, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        dist = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
         dist = Dense(N_outputs, activation='softmax', name='probabilities', kernel_regularizer=regularizers.l2(self.c))(dist)
 
-        val = Dense(16, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        val = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
         val = Dense(1, activation='sigmoid', name='value', kernel_regularizer=regularizers.l2(self.c))(val)
 
         self.model = Model(state, [dist, val])

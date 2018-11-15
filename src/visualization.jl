@@ -56,37 +56,65 @@ function visualize(p, s, r; tree=nothing)
     for (i,c) in enumerate(s.cars)
         if i == 1
             color = colorant"green"
+            ac = ArrowCar([c.x+s.x, (c.y-1.0)*pp.w_lane], id=i, color=color, length=pp.l_truck, width=pp.w_truck)
         else
             agg = aggressiveness(Multilane.STANDARD_CORRELATED, c.behavior)
             color = weighted_color_mean(agg, colorant"red", colorant"blue")
+            ac = ArrowCar([c.x+s.x, (c.y-1.0)*pp.w_lane], id=i, color=color, length=pp.l_car, width=pp.w_car)
         end
-        ac = ArrowCar([c.x+s.x, (c.y-1.0)*pp.w_lane], id=i, color=color)
         push!(stuff, ac)
     end
 
     render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
 end
 
-function visualize_with_nn(p, s, r, values, distributions; tree=nothing)
+function visualize_with_nn(p, s, a, r, values, p0_vec, p0_vec_all_actions, p_nn, p_tree; tree=nothing)
     pp = p.dmodel.phys_param
     stuff = []
     roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
     push!(stuff, roadway)
-    str = @sprintf("t: %6.2f\nx: %6.2f\nvel: %6.2f", s.t, s.x, s.cars[1].vel)
+
+    if a.lane_change == 0.
+        if a.acc == 0.
+            action_index = 1
+        elseif a.acc < 0.
+            action_index = 2
+        elseif a.acc > 0.
+            action_index = 3
+        end
+    elseif a.lane_change < 0.
+        action_index = 4
+    else
+        action_index = 5
+    end
+    str = @sprintf("t: %6.2f x: %6.2f y: %6.2f vel: %6.2f lchange: %6.2f", s.t, s.x, s.cars[1].y, s.cars[1].vel, s.cars[1].lane_change)
     if r != nothing
-        str *= @sprintf("\nr: %6.2f", r)
+        str *= @sprintf("\na: %d r: %6.2f ", action_index, r)
     end
     if typeof(s.cars[1].behavior) == ACCBehavior
-        str *= @sprintf("\nv_set: %6.2f\nT_set: %6.2f", s.cars[1].behavior.p_idm.v0, s.cars[1].behavior.p_idm.T)
+        str *= @sprintf("v_set: %6.2f T_set: %6.2f", s.cars[1].behavior.p_idm.v0, s.cars[1].behavior.p_idm.T)
     end
-    str *= @sprintf("\nvalues: ")
-    for i in 1:7
-        str *= @sprintf("%6.2f ", values[8-i])
-    end
-    for j in 1:7
+
+    str *= @sprintf("\n          %6.2f %6.2f %6.2f %6.2f %6.2f", p_tree[1], p_tree[2], p_tree[3], p_tree[4], p_tree[5])
+    str *= @sprintf("\n          %6.2f %6.2f %6.2f %6.2f %6.2f", p_nn[1], p_nn[2], p_nn[3], p_nn[4], p_nn[5])
+
+    for (i,v) in enumerate(values)
         str *= @sprintf("\n")
-        str *= @sprintf("%6.2f %6.2f %6.2f %6.2f %6.2f", distributions[8-j,1], distributions[8-j,2], distributions[8-j,3], distributions[8-j,4], distributions[8-j,5])
+        if mod(i-1,3)==0
+            str *= @sprintf("%d", 4-(i-1)/3)
+        else
+            str *= @sprintf(" ")
+        end
+        str *= @sprintf("%6.2f   %6.2f %6.2f %6.2f %6.2f %6.2f   %6.2f %6.2f %6.2f %6.2f %6.2f",
+                        values[i], p0_vec[11-i][1], p0_vec[11-i][2], p0_vec[11-i][3], p0_vec[11-i][4], p0_vec[11-i][5],
+                         p0_vec_all_actions[11-i][1], p0_vec_all_actions[11-i][2], p0_vec_all_actions[11-i][3], p0_vec_all_actions[11-i][4], p0_vec_all_actions[11-i][5])
+        if mod(i-1,3)==0
+         str *= @sprintf(" %d", 4-(i-1)/3)
+        else
+         str *= @sprintf("  ")
+        end
     end
+
     push!(stuff, str)
     if tree != nothing
         # push!(stuff, RelativeRender(tree, s.t, s.cars[1].vel))
@@ -106,6 +134,7 @@ function visualize_with_nn(p, s, r, values, distributions; tree=nothing)
     end
 
     render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
+    # render(stuff, cam=CarFollowCamera(1, 4.),canvas_height=1200, canvas_width=2000)
 end
 
 # start with just lines

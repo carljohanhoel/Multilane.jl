@@ -105,7 +105,8 @@ end
 
 function max_min_cum_reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLState, D, SpeedReward} }) where D<:AbstractMLDynamicsModel
     #Not properly defined, but fine for now
-    v_min = 0
+    # v_min = 0
+    v_min = 0.5/(1-mdp.discount)
     v_max = 1/(1-mdp.discount)
     return [v_min, v_max]
 end

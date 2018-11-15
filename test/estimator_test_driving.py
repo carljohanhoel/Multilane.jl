@@ -8,7 +8,13 @@ sys.path.append('../src/')
 
 from neural_net import NeuralNetwork
 
-nn = NeuralNetwork(N_inputs=82,N_outputs=5, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+# N_ego_states = 2
+N_ego_states = 3
+N_other_vehicle_states = 4
+N_other_vehicles = 20
+N_inputs = N_ego_states + N_other_vehicle_states*N_other_vehicles
+
+nn = NeuralNetwork(N_inputs=N_inputs,N_outputs=5, replay_memory_max_size=300, training_start=200, log_path='../Logs/tmp_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 n_samples = 200
 np.random.seed(1)
@@ -24,10 +30,10 @@ dist_act_single, _ = nn.forward_pass(np.expand_dims(state[0],0))
 assert(np.allclose(dist_act_single[0],dist_act[0]))   #There is a small difference when calling with a batch and when calling with a single vector. Does it matter?
 
 #Test maxpool, that vehicles are interchangeable
-test_state = np.random.rand(1,82)
+test_state = np.random.rand(1,N_inputs)
 test_state2 = np.copy(test_state)
-test_state2[0,2:22] = test_state[0,62:82]
-test_state2[0,62:82] = test_state[0,2:22]
+test_state2[0,N_ego_states:N_ego_states+20] = test_state[0,N_inputs-20:N_inputs]
+test_state2[0,N_inputs-20:N_inputs] = test_state[0,N_ego_states:N_ego_states+20]
 t1 = nn.forward_pass(test_state)
 t2 = nn.forward_pass(test_state2)
 assert( (t1[0]== t2[0]).any() )
@@ -44,7 +50,7 @@ for i in range(0, 100):
 print(time.time() - start_time)
 
 start_time = time.time()
-for i in range(0,10000):
+for i in range(0,1000):
     nn.model.train_on_batch(state[0:32], [train_dist[0:32], train_val[0:32]])
 print(time.time()-start_time)
 
@@ -65,3 +71,5 @@ assert(np.all(dist_act1 == dist_act2))
 #Test batch norm
 dist_act_single, _ = nn.forward_pass(np.expand_dims(state[0],0))
 assert(np.allclose(dist_act_single[0],dist_act1[0]))
+
+print("Tests passed")

@@ -191,7 +191,8 @@ convert_state(state::Vector{MLState}, p::Union{MLMDP,MLPOMDP}) = convert_state(s
 function convert_state(state::Vector{MLState}, dmodel::AbstractMLDynamicsModel)
     n = length(state)
     nb_cars = dmodel.nb_cars
-    nb_ego_states = 2
+    # nb_ego_states = 2
+    nb_ego_states = 3
     nb_car_states = 4
     converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
     for i in 1:n
@@ -213,6 +214,7 @@ function convert_state(state::MLState, dmodel::AbstractMLDynamicsModel, nb_ego_s
     converted_state = zeros(1,nb_ego_states+nb_cars*nb_car_states)
     converted_state[1] = (state.cars[1].y - bias_y_ego) / norm_y_ego
     converted_state[2] = (state.cars[1].vel - bias_v_ego) / norm_v_ego
+    converted_state[3] = state.cars[1].lane_change
     for (i,car) in enumerate(state.cars[2:end])
         converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position
         converted_state[nb_ego_states+2+4*(i-1)] = (car.y-state.cars[1].y) / norm_y   #Relative lateral position

@@ -91,13 +91,15 @@ class NeuralNetwork:
         N_outputs = self.N_outputs
 
         N_vehicles = 20
+        # N_inputs_ego_vehicle = 2
+        N_inputs_ego_vehicle = 3
         N_inputs_per_vehicle = 4
         N_conv_filters = 32
 
         state = Input(shape=(N_inputs,))
 
-        state_ego = Lambda(lambda state : state[:,:2])(state)
-        state_others = Lambda(lambda state: state[:, 2:])(state)
+        state_ego = Lambda(lambda state : state[:,:N_inputs_ego_vehicle])(state)
+        state_others = Lambda(lambda state: state[:, N_inputs_ego_vehicle:])(state)
 
         state_others_reshaped = Reshape((N_vehicles*N_inputs_per_vehicle,1,),input_shape=(N_vehicles*N_inputs_per_vehicle,))(state_others)
         conv_net = Conv1D(N_conv_filters, N_inputs_per_vehicle, strides=N_inputs_per_vehicle, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(state_others_reshaped)

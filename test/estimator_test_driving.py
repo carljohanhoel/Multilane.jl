@@ -8,8 +8,8 @@ sys.path.append('../src/')
 
 from neural_net import NeuralNetwork
 
-# N_ego_states = 2
-N_ego_states = 3
+#N_ego_states = 3
+N_ego_states = 5
 N_other_vehicle_states = 4
 N_other_vehicles = 20
 N_inputs = N_ego_states + N_other_vehicle_states*N_other_vehicles

@@ -91,8 +91,8 @@ class NeuralNetwork:
         N_outputs = self.N_outputs
 
         N_vehicles = 20
-        # N_inputs_ego_vehicle = 2
-        N_inputs_ego_vehicle = 3
+        #N_inputs_ego_vehicle = 3
+        N_inputs_ego_vehicle = 5
         N_inputs_per_vehicle = 4
         N_conv_filters = 32
 

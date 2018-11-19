@@ -191,8 +191,8 @@ convert_state(state::Vector{MLState}, p::Union{MLMDP,MLPOMDP}) = convert_state(s
 function convert_state(state::Vector{MLState}, dmodel::AbstractMLDynamicsModel)
     n = length(state)
     nb_cars = dmodel.nb_cars
-    # nb_ego_states = 2
-    nb_ego_states = 3
+    # nb_ego_states = 3
+    nb_ego_states = 5
     nb_car_states = 4
     converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
     for i in 1:n
@@ -208,6 +208,8 @@ function convert_state(state::MLState, dmodel::AbstractMLDynamicsModel, nb_ego_s
     norm_v_ego = (dmodel.phys_param.v_max - dmodel.phys_param.v_min)/2
     bias_y_ego = (dmodel.phys_param.nb_lanes+1)/2
     norm_y_ego = (dmodel.phys_param.nb_lanes-1)/2
+    bias_T_ego = (state.cars[1].behavior.p_idm.max_T + state.cars[1].behavior.p_idm.min_T)/2
+    norm_T_ego = (state.cars[1].behavior.p_idm.max_T - state.cars[1].behavior.p_idm.min_T)/2
 
     nb_cars = dmodel.nb_cars
 
@@ -215,6 +217,8 @@ function convert_state(state::MLState, dmodel::AbstractMLDynamicsModel, nb_ego_s
     converted_state[1] = (state.cars[1].y - bias_y_ego) / norm_y_ego
     converted_state[2] = (state.cars[1].vel - bias_v_ego) / norm_v_ego
     converted_state[3] = state.cars[1].lane_change
+    converted_state[4] = (state.cars[1].behavior.p_idm.v0 - bias_v_ego) / norm_v_ego
+    converted_state[5] = (state.cars[1].behavior.p_idm.T - bias_T_ego) / norm_T_ego
     for (i,car) in enumerate(state.cars[2:end])
         converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position
         converted_state[nb_ego_states+2+4*(i-1)] = (car.y-state.cars[1].y) / norm_y   #Relative lateral position

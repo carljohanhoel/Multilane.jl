@@ -1,17 +1,12 @@
-# ZZZ Removed precompilation of Multilane, not sure what that means
-
 push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
 using Multilane
 using MCTS
+
 using POMDPToolbox
 using POMDPs
-# using POMCP
-using Missings
-using DataFrames
-using CSV
 using POMCPOW
 
 #For viz
@@ -21,73 +16,21 @@ using ProgressMeter
 using AutomotiveDrivingModels
 using ImageView
 using Images
-#include("../src/visualization.jl")
 
 #For tree viz
 using D3Trees
-@everywhere using D3Trees
 
+# simple_run = true
+simple_run = false
+n_workers = 1
 
-@everywhere using Missings
-@everywhere using Multilane
-@everywhere using POMDPToolbox
-
+include("parameters.jl")
+c_uct = c_puct
 
 ##
 DEBUG = true #Debugging is also controlled from debug.jl
 start_time = Dates.format(Dates.now(), "yymmdd_HHMMSS_")
 
-#Solver parameters
-# @show N = 1000
-@show n_iters = 2000 #10000   #C 1000
-max_time = Inf
-max_depth = 20 #60   #C 20
-@show c_uct =0.1 # 2.0   #C 5.0
-k_state = 1.0 #4.0 #0.2, #C 4.0,
-alpha_state = 0.0 #1/8.0 #0.0, #C 1/8.0,
-# @show val = SimpleSolver()
-alldata = DataFrame()
-
-
-@show scenario = "continuous_driving"
-# @show problem_type = "pomdp"
-@show problem_type = "mdp"
-
-## Problem definition
-if scenario == "continuous_driving"
-    cor = 0.75
-
-    #Reward
-    lambda = 0.0
-    lane_change_cost = 0.03 #0.01 #1.0
-
-    nb_lanes = 4
-    lane_length = 600.
-    nb_cars = 20
-    sensor_range = 200.   #Remember that this also affects the IDM/MOBIL model
-    @show obs_behaviors = false   #Estimate or observe other vehicles' behaviors in pomdp setting
-
-    initSteps = 150   #To create initial random state
-
-    v_des = 25.0
-
-    rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, lambda=lambda)
-elseif scenario == "forced_lane_changes" #ZZZ deprecated
-    cor = 0.75
-    lambda = 1.0
-
-    nb_lanes = 4
-    lane_length = 100.
-    nb_cars = 10
-
-    initSteps = 200
-
-    v_des = 35.0
-    rmodel = SuccessReward(lambda=lambda)
-end
-
-@show cor
-@show lambda
 
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
 
@@ -106,7 +49,7 @@ dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               semantic_actions = true
                              )
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
-pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
+pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
 
 if problem_type == "mdp"
@@ -119,14 +62,15 @@ elseif problem_type == "pomdp"
     end
 end
 
-## Solver definition
+
+# Solver definition
 if scenario == "continuous_driving"
     rollout_problem = deepcopy(problem)
     rollout_problem.dmodel.semantic_actions = false
     rollout_problem.dmodel.max_dist = Inf
     rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
     rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
-elseif scenario == "forced_lane_changes" #ZZZ deprecated
+elseif scenario == "forced_lane_changes"
     rollout_policy = SimpleSolver()
 end
 
@@ -137,8 +81,8 @@ idle_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBIL
 idle_policy = Multilane.DeterministicBehaviorPolicy(idle_problem, idle_behavior, false)
 
 dpws = DPWSolver(depth=max_depth,
-                 n_iterations=n_iters,
-                 max_time=max_time,
+                 n_iterations=n_iter,
+                 max_time=Inf,
                  exploration_constant=c_uct,
                  k_state=k_state,
                  alpha_state=alpha_state,
@@ -148,6 +92,15 @@ dpws = DPWSolver(depth=max_depth,
                  # estimate_value=val
                  tree_in_info = DEBUG
                 )
+
+
+rng_estimator=MersenneTwister(rng_seed+1) #Not used
+rng_evaluator=MersenneTwister(rng_seed+2)
+rng_solver=MersenneTwister(rng_seed+3)
+rng_history=MersenneTwister(rng_seed+4)
+rng_trainer=MersenneTwister(rng_seed+5)
+
+
 
 function make_updater(cor, problem, rng_seed)
     wup = WeightUpdateParams(smoothing=0.0, wrong_lane_factor=0.05)
@@ -178,114 +131,115 @@ end
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
 
+policy = solve(solver,sim_problem)
+srand(policy, rng_seed+5)
+
+
 
 ## Run simulations
-
 N = 20
 for i in 1:N
-# i = 7
-rng_base_seed = 15
-rng_seed = 100*(i-1)+rng_base_seed
-rng = MersenneTwister(rng_seed)
-s_initial = initial_state(sim_problem, rng, initSteps=initSteps)   #Init random state by simulating 200 steps with standard IDM model
-# is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, pp.v_med, 0.0, Multilane.NORMAL, 1),
-#                                 CarState(pp.lane_length/2+20, 1, pp.v_med, 0.0, Multilane.TIMID, 1),
-#                                 CarState(pp.lane_length/2, 2, pp.v_med, 0.0, Multilane.TIMID, 1)])
-s_initial = set_ego_behavior(s_initial, ego_acc)
-write_to_png(visualize(sim_problem,s_initial,0),"./Figs/ref_model_state_at_t0_i"*string(i)*".png")
-#ZZZ Line below is temp, just to start with simple initial state
-# is = Multilane.MLState(0.0, 0.0, Multilane.CarState[Multilane.CarState(50.0, 2.0, 30.0, 0.0, Multilane.IDMMOBILBehavior([1.4, 2.0, 1.5, 35.0, 2.0, 4.0], [0.6, 2.0, 0.1], 1), 1)], Nullable{Any}())
-o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
+    # Reset rng:s
+    rng_evaluator_copy=MersenneTwister(Int(rng_evaluator.seed[1])+100*(i-1))
+    rng_history_copy=MersenneTwister(Int(rng_history.seed[1])+100*(i-1))
 
-metadata = Dict(:rng_seed=>rng_seed, #Not used now
-                :lambda=>lambda,
-                :solver=>solver,
-                :dt=>pp.dt,
-                :cor=>cor
-           )
-hr = HistoryRecorder(max_steps=200, rng=rng, capture_exception=false, show_progress=true)
-hr_ref = HistoryRecorder(max_steps=200, rng=deepcopy(rng), capture_exception=false, show_progress=true)
-hr_idle = HistoryRecorder(max_steps=200, rng=deepcopy(rng), capture_exception=false, show_progress=true)
+    s_initial = initial_state(sim_problem, rng_evaluator_copy)
+    s_initial = set_ego_behavior(s_initial, ego_acc)
+    o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
 
-##
+    write_to_png(visualize(sim_problem,s_initial,0),"./Figs/ref_model_state_at_t0_i"*string(i)*".png")
 
-if sim_problem isa POMDP
-    if solver isa MLMPCSolver
-        updater = make_updater(cor, sim_problem, rng_seed)
-        planner = deepcopy(solve(solver, sim_problem))
-        srand(planner, rng_seed+60000)   #Sets rng seed of planner
-        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
-        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
-        hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
+    metadata = Dict(:rng_seed=>rng_seed, #Not used now
+                    :lambda=>lambda,
+                    :solver=>solver,
+                    :dt=>pp.dt,
+                    :cor=>cor
+               )
+    hr = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
+    hr_ref = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
+    hr_idle = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
+
+
+
+    ##
+
+    if sim_problem isa POMDP
+        if solver isa MLMPCSolver
+            updater = make_updater(cor, sim_problem, rng_seed+2+100*(i-1))
+            planner = deepcopy(policy)
+            srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
+            hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+            hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
+            hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
+        else
+            updater = LimitedRangeUpdater()
+            planner = deepcopy(policy)
+            srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
+            hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+            hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
+            hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
+        end
     else
-        updater = LimitedRangeUpdater()
-        planner = deepcopy(solve(solver, sim_problem))
-        srand(planner, rng_seed+60000)   #Sets rng seed of planner
-        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
-        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
-        hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
+        planner = deepcopy(policy)
+        srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
+        hist = simulate(hr, sim_problem, planner, s_initial)
+        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
+        hist_idle = simulate(hr_idle, sim_problem, idle_policy, s_initial)
     end
-else
-    planner = deepcopy(solve(solver, sim_problem))
-    srand(planner, rng_seed+60000)   #Sets rng seed of planner
-    hist = simulate(hr, sim_problem, planner, s_initial)
-    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
-    hist_idle = simulate(hr_idle, sim_problem, idle_policy, s_initial)
-end
 
-@show sum(hist.reward_hist)
-@show sum(hist_ref.reward_hist)
-@show sum(hist_idle.reward_hist)
-@show hist.state_hist[end].x
-@show hist_ref.state_hist[end].x
-@show hist_idle.state_hist[end].x
+    @show sum(hist.reward_hist)
+    @show sum(hist_ref.reward_hist)
+    @show sum(hist_idle.reward_hist)
+    @show hist.state_hist[end].x
+    @show hist_ref.state_hist[end].x
+    @show hist_idle.state_hist[end].x
 
-open("./Logs/dpwAndRefAndIdleModelsDistance"*start_time*".txt","a") do f
-    # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
-    writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
-end
+    open("./Logs/dpwAndRefAndIdleModelsDistance"*start_time*".txt","a") do f
+        # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+        writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+    end
 
-# open("./Logs/refModelResults2_.txt","a") do f
-#     writedlm(f, [[sum(hist_ref.reward_hist)]], " ")
-#     writedlm(f, [[hist_ref.state_hist[end].x]], " ")
-# end
+    # open("./Logs/refModelResults2_.txt","a") do f
+    #     writedlm(f, [[sum(hist_ref.reward_hist)]], " ")
+    #     writedlm(f, [[hist_ref.state_hist[end].x]], " ")
+    # end
 
-# end
-#
-# #Visualization
-# #Set time t used for showing tree. Use video to find interesting situations.
-# t = 4.5
-# step = convert(Int, t / pp.dt) + 1
-# write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-# print(hist.action_hist[step])
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+    # end
+    #
+    # #Visualization
+    # #Set time t used for showing tree. Use video to find interesting situations.
+    # t = 4.5
+    # step = convert(Int, t / pp.dt) + 1
+    # write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+    # print(hist.action_hist[step])
+    # inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+    # # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
 
-#
-#Produce video
-frames = Frames(MIME("image/png"), fps=10/pp.dt)
-@showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
-    push!(frames, visualize(problem, s, r))
-end
-gifname = "./Figs/dpw_i"*string(i)*"_"*start_time*".ogv"
-write(gifname, frames)
+    #
+    #Produce video
+    frames = Frames(MIME("image/png"), fps=3/pp.dt)
+    @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
+        push!(frames, visualize(problem, s, r))
+    end
+    gifname = "./Figs/dpw_i"*string(i)*"_"*start_time*".ogv"
+    write(gifname, frames)
 
 
-#Reference model
-frames = Frames(MIME("image/png"), fps=10/pp.dt)
-@showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
-    push!(frames, visualize(problem, s, r))
-end
-gifname = "./Figs/refModel_i"*string(i)*"_"*start_time*".ogv"
-write(gifname, frames)
-#
-#Idle model
-frames = Frames(MIME("image/png"), fps=10/pp.dt)
-@showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
-    push!(frames, visualize(problem, s, r))
-end
-gifname = "./Figs/idleModel_i"*string(i)*"_"*start_time*".ogv"
-write(gifname, frames)
+    #Reference model
+    frames = Frames(MIME("image/png"), fps=3/pp.dt)
+    @showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
+        push!(frames, visualize(problem, s, r))
+    end
+    gifname = "./Figs/refModel_i"*string(i)*"_"*start_time*".ogv"
+    write(gifname, frames)
+    #
+    #Idle model
+    frames = Frames(MIME("image/png"), fps=3/pp.dt)
+    @showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
+        push!(frames, visualize(problem, s, r))
+    end
+    gifname = "./Figs/idleModel_i"*string(i)*"_"*start_time*".ogv"
+    write(gifname, frames)
 
 
 

@@ -1,39 +1,52 @@
-#Runs simulation with MDP and POMDP settings, but uses no MCTS to control the ego vehicle.
-
 push!(LOAD_PATH,joinpath("./src"))
-# include("../src/Multilane.jl")   #ZZZ This may be needed...
 
-using Revise #To allow recompiling of modules withhout restarting julia
+using Revise
 
 using Multilane
 using MCTS
-using POMDPs
+
 using POMDPToolbox
-using Base.Test
+using POMDPs
+using POMCPOW
 
 #For viz
-using POMCPOW
 using AutoViz
 using Reel
 using ProgressMeter
 using AutomotiveDrivingModels
 using ImageView
 using Images
-# include("../src/visualization.jl")
 
-##
-#Set up problem configuration
-nb_lanes = 3
-pp = PhysicalParam(nb_lanes,lane_length=600., sensor_range=150.) #2.=>col_length=8   #Sets parameters of lanes and cars. Quite a few standard parameters are set here.
-_discount = 1.
-nb_cars=20
+# simple_run = true
+simple_run = false
+n_workers = 1
 
-rmodel = NoCrashRewardModel()   #Sets parameters of reward model
-behaviors = standard_uniform(correlation=0.75)   #Sets max/min values of IDM and MOBIL and how they are correlated.
-dmodel = NoCrashIDMMOBILModel(nb_cars, pp, behaviors=behaviors)   #Sets up simulation model parameters.
-dmodel.max_dist = 100000   #Make svisualization fail if max_dist is set to the default Inf
-mdp = NoCrashMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);   #Sets the mdp, which inherits from POMDPs.jl
-rng = MersenneTwister(56)
+include("parameters.jl")
+
+behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
+
+############# TEST ##############
+behaviors.max_mobil = MOBILParam(0.0, behaviors.max_mobil[2], behaviors.max_mobil[3])   #Sets politeness factor to 0 for all vehicles.
+#################################
+
+pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range, obs_behaviors=obs_behaviors)
+dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
+                              behaviors=behaviors,
+                              p_appear=1.0,
+                              lane_terminate=true,
+                              max_dist=30000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
+                              vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
+                              init_state_steps = initSteps,
+                              semantic_actions = true
+                             )
+mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
+pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
+pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
+
+
+rng_evaluator=MersenneTwister(rng_seed+2)
+rng_history=MersenneTwister(rng_seed+4)
+
 
 v_des = 25.0
 behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
@@ -41,103 +54,21 @@ policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up 
 ego_acc = ACCBehavior(ACCParam(v_des), 1)
 # policy = Multilane.DeterministicBehaviorPolicy(mdp, ego_acc, true)   #No lane changes
 
-initSteps = 200
-s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
+
+s = initial_state(mdp::NoCrashMDP, rng_evaluator, initSteps=initSteps) #Creates inital state by first initializing only ego vehicle and then running simulatio for 200 steps, where additional vehicles are randomly added.
 is = set_ego_behavior(s, ego_acc)
-# @show s.cars[1]
-#visualize(mdp,s,MLAction(0,0),0.0)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
 
-sim = HistoryRecorder(rng=rng, max_steps=200, show_progress=true) # initialize a random number generator
+sim = HistoryRecorder(rng=rng_history, max_steps=episode_length, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
 
 println("sim done")
 
-frames = Frames(MIME("image/png"), fps=10/pp.dt)
+
+frames = Frames(MIME("image/png"), fps=3/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
     push!(frames, visualize(mdp, s, r))
 end
 gifname = "./Figs/testViz.ogv"
 write(gifname, frames)
 println("video done")
-
-# ##
-# error()
-#
-#
-# # check for crashes
-# for i in 1:length(state_hist(hist))-1
-#     if is_crash(mdp, state_hist(hist)[i], state_hist(hist)[i+1])
-#         println("Crash:")
-#         println("mdp = $mdp\n")
-#         println("s = $(state_hist(hist)[i])\n")
-#         println("a = $(action_hist(hist)[i])\n")
-#         println("Saving gif...")
-#         f = write_tmp_gif(mdp, hist)
-#         println("gif written to $f")
-#     end
-#     @test !is_crash(mdp, state_hist(hist)[i], state_hist(hist)[i+1])
-# end
-#
-# # for i in 1:length(sim.state_hist)-1
-# #     if is_crash(mdp, sim.state_hist[i], sim.state_hist[i+1])
-# #         visualize(mdp, sim.state_hist[i], sim.action_hist[i], sim.state_hist[i+1], two_frame_crash=true)
-# #         # println(repr(mdp))
-# #         # println(repr(sim.state_hist[i]))
-# #         println("Crash after step $i")
-# #         println("Chosen Action: $(sim.action_hist[i])")
-# #         println("Available actions:")
-# #         for a in actions(mdp, sim.state_hist[i], actions(mdp))
-# #             println(a)
-# #         end
-# #         println("Press Enter to continue.")
-# #         readline(STDIN)
-# #     end
-# # end
-#
-# ##
-# #---------------------------------------
-#
-#
-# behaviors = standard_uniform(correlation=0.75)   #Creates behaviors
-# dmodel = NoCrashIDMMOBILModel(dmodel, behaviors)   #Changes the behaviors in dmodel to the specified ones
-# pomdp = NoCrashPOMDP{typeof(rmodel), typeof(dmodel.behaviors)}(dmodel, rmodel, _discount, true);
-#
-# rng = MersenneTwister(8)
-#
-# initSteps = 150
-# s = initial_state(mdp::NoCrashMDP, rng, initSteps=initSteps)
-#
-# v_des = 25.0
-# behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
-# policy = Multilane.DeterministicBehaviorPolicy(mdp, behavior, false)   #Sets up behavior of ego vehicle for the simulation. False referes to that lane changes are allowed.
-#
-# sim = HistoryRecorder(rng=rng, max_steps=500) # initialize a random number generator
-#
-# wup = WeightUpdateParams(smoothing=0.0, wrong_lane_factor=0.5)
-# up = BehaviorParticleUpdater(pomdp, 1000, 0.1, 0.1, wup, MersenneTwister(50000))
-#
-# @time hist = simulate(sim, pomdp, policy, up, MLPhysicalState(s), s)
-# @show n_steps(hist)
-#
-# # check for crashes
-# for i in 1:length(state_hist(hist))-1
-#     if is_crash(mdp, state_hist(hist)[i], state_hist(hist)[i+1])
-#         println("Crash:")
-#         println("mdp = $mdp\n")
-#         println("s = $(state_hist(hist)[i])\n")
-#         println("a = $(action_hist(hist)[i])\n")
-#         println("Saving gif...")
-#         f = write_tmp_gif(mdp, hist)
-#         println("gif written to $f")
-#     end
-#     @test !is_crash(mdp, state_hist(hist)[i], state_hist(hist)[i+1])
-# end
-#
-#
-# frames = Frames(MIME("image/png"), fps=10/pp.dt)
-# @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
-#     push!(frames, visualize(pomdp, s, r))
-# end
-# gifname = "./Figs/testViz2.ogv"
-# write(gifname, frames)

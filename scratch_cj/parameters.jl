@@ -38,10 +38,10 @@ end
 
 # Parameters AZ solver
 @show n_iter = 2000
-depth = 20 #ZZZ not used
+max_depth = 20 #Just used for MCTS-DPW, not AZ
 @show c_puct = 0.1 #1. #5.
 @show k_state = 1.0 #3.0
-@show alpha_state = 0.0 #0.2
+@show alpha_state = 0.3 #0.2
 @show tau = 1.1
 @show stash_factor = 1.5
 @show noise_dirichlet = 1.0

@@ -12,9 +12,9 @@ simple_run = false
 
 tree_in_info = true
 
-sample_to_load = "6081"
+sample_to_load = "26031"
+network_to_load = "181024_154644_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03"
 # network_to_load = "181024_155209_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03_Update_3_times_per_sample"
-network_to_load = "181024_155209_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03_Update_3_times_per_sample"
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 
 
@@ -24,10 +24,12 @@ include("simulation_setup.jl")
 ##
 
 #Load state from log
-saved_data = JLD.load("./Logs/states_run_i.jld")
+# saved_data = JLD.load("./Logs/states_run_i.jld")
 # saved_data = JLD.load("./Logs/saved_states_no_vehicles.jld")
-rec_states = saved_data["state_hist"]
-t = 119.25
+# rec_states = saved_data["state_hist"]
+saved_data = JLD.load(logs_path*network_to_load*"/eval_hist_process_5_step_"*sample_to_load*".jld")
+rec_states = saved_data["hist"].state_hist
+t = 0.0
 step = convert(Int, t / pp.dt) + 1
 test_state = rec_states[step]
 
@@ -35,10 +37,11 @@ test_state = rec_states[step]
 acc = test_state.cars[1].behavior.p_idm
 acc2 = [value for (idx,value) in enumerate(acc)]
 # acc2[4] = 24.0
-acc2[3] = 0.5
-test_state.cars[1] = CarState(test_state.cars[1].x,test_state.cars[1].y,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
-# test_state.cars[1] = CarState(test_state.cars[1].x,3.0,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
-# test_state.cars[1] = CarState(test_state.cars[1].x,3.5,test_state.cars[1].vel,1.0, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].id)
+# acc2[3] =   0.5
+# test_state.cars[1] = CarState(test_state.cars[1].x,test_state.cars[1].y,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].length, test_state.cars[1].width, test_state.cars[1].id)
+# test_state.cars[1] = CarState(test_state.cars[1].x,1.0,test_state.cars[1].vel,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].length, test_state.cars[1].width, test_state.cars[1].id)
+# test_state.cars[1] = CarState(test_state.cars[1].x,3.5,test_state.cars[1].vel,1.0, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].length, test_state.cars[1].width, test_state.cars[1].id)
+# test_state.cars[1] = CarState(test_state.cars[1].x,3.0,25.36,test_state.cars[1].lane_change, ACCBehavior(ACCParam(acc2),1), test_state.cars[1].length, test_state.cars[1].width, test_state.cars[1].id)
 
 #Run MCTS
 policy.training_phase = false #Remove Dirichlet noise on prior probabilities
@@ -53,7 +56,7 @@ v0 = zeros(7,1)
 p0_vec = zeros(7,5)
 for i in 1:7
     y = i*0.5 + 0.5
-    s_ego_veh = CarState(s_ego_veh.x, y, s_ego_veh.vel, (mod(y,1.0)>0)*1.0, s_ego_veh.behavior, s_ego_veh.id)
+    s_ego_veh = CarState(s_ego_veh.x, y, s_ego_veh.vel, (mod(y,1.0)>0)*1.0, s_ego_veh.behavior, s_ego_veh.length, s_ego_veh.width, s_ego_veh.id)
     test_state.cars[1] = s_ego_veh
     v0[i] = estimate_value(policy.solved_estimate, policy.mdp, test_state, policy.solver.depth)[1]
 

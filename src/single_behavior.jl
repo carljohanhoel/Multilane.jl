@@ -36,7 +36,7 @@ action(p::SingleBehaviorPolicy, s) = first(action_info(p, s))
 function single_behavior_state(s::Union{MLState, MLPhysicalState}, behavior)
     new_cars = Vector{CarState}(length(s.cars))
     for (i,c) in enumerate(s.cars)
-        new_cars[i] = CarState(c.x, c.y, c.vel, c.lane_change, behavior, c.id)
+        new_cars[i] = CarState(c.x, c.y, c.vel, c.lane_change, behavior, c.length, c_width, c.id)
     end
     return MLState(s, new_cars)
 end

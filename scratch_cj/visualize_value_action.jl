@@ -47,12 +47,12 @@ step = 0
     s_vec = []
     for y in 1:0.5:4
         if mod(y,1.0)==0.
-            s_ego_veh = CarState(s_ego_veh.x, y, s_ego_veh.vel, 0.0, s_ego_veh.behavior, s_ego_veh.id)
+            s_ego_veh = CarState(s_ego_veh.x, y, s_ego_veh.vel, 0.0, s_ego_veh.behavior, s_ego_veh.length, s_ego_veh.width, s_ego_veh.id)
             s.cars[1] = s_ego_veh
             push!(s_vec,deepcopy(s))
         else
             for lane_change in [-1,1.]
-                s_ego_veh = CarState(s_ego_veh.x, y, s_ego_veh.vel, lane_change, s_ego_veh.behavior, s_ego_veh.id)
+                s_ego_veh = CarState(s_ego_veh.x, y, s_ego_veh.vel, lane_change, s_ego_veh.behavior, s_ego_veh.length, s_ego_veh.width, s_ego_veh.id)
                 s.cars[1] = s_ego_veh
                 push!(s_vec,deepcopy(s))
             end

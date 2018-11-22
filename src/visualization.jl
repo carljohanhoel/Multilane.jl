@@ -26,7 +26,7 @@ function interp_state(s, sp, frac)
             vel = a*cp.vel + b*c.vel
             lane_change = c.lane_change
             id = c.id
-            push!(cars, CarState(x, y, vel, lane_change, c.behavior, id))
+            push!(cars, CarState(x, y, vel, lane_change, c.behavior, c.length, c.width, id))
         end
     end
     x = a*sp.x + b*s.x

@@ -612,10 +612,10 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             else
                 if i==1
                     # sp.cars[i] = CarState(xp, yp, velp, lcs[i], new_ego_behavior, s.cars[i].id)
-                    sp.cars[i] = CarState(xp, yp, velp, !isinteger(yp) ? lcs[i] : 0., new_ego_behavior, s.cars[i].id)
+                    sp.cars[i] = CarState(xp, yp, velp, !isinteger(yp) ? lcs[i] : 0., new_ego_behavior, s.cars[i].length, s.cars[i].width, s.cars[i].id)
                 else
                     # sp.cars[i] = CarState(xp, yp, velp, lcs[i], car.behavior, s.cars[i].id)
-                    sp.cars[i] = CarState(xp, yp, velp, !isinteger(yp) ? lcs[i] : 0., car.behavior, s.cars[i].id)
+                    sp.cars[i] = CarState(xp, yp, velp, !isinteger(yp) ? lcs[i] : 0., car.behavior, s.cars[i].length, s.cars[i].width, s.cars[i].id)
                 end
             end
         end
@@ -703,10 +703,10 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 if vel > sp.cars[1].vel
                     if rand(rng) > 0.5   #Half the probability of inserting a fast vehicle
                         # at back
-                        push!(sp.cars, CarState(0.0, lane, vel, 0.0, behavior, next_id))
+                        push!(sp.cars, CarState(0.0, lane, vel, 0.0, behavior, pp.l_car, pp.w_car, next_id))
                     end
                 else
-                    push!(sp.cars, CarState(pp.lane_length, lane, vel, 0.0, behavior, next_id))
+                    push!(sp.cars, CarState(pp.lane_length, lane, vel, 0.0, behavior, pp.l_car, pp.w_car, next_id))
                 end
             end
         end
@@ -861,7 +861,7 @@ function set_ego_behavior(s::MLState, ego_behavior::BehaviorModel=NORMAL)
     nb_cars = length(s.cars)
     ego_car = s.cars[1]
     cars = Array{CarState}(0)
-    push!(cars, CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, ego_behavior, ego_car.id))
+    push!(cars, CarState(ego_car.x, ego_car.y, ego_car.vel, ego_car.lane_change, ego_behavior, ego_car.length, ego_car.width, ego_car.id))
     for i=2:nb_cars
         push!(cars, s.cars[i])
     end

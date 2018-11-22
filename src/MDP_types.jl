@@ -48,15 +48,17 @@ struct CarState
 	vel::Float64 #v_x
 	lane_change::Float64 # ydot # in units of LANES PER SECOND
 	behavior::BehaviorModel
+    length::Float64
+    width::Float64
     id::Int # car id to track from state to state - ego is ALWAYS 1
 end
 
 function ==(a::CarState,b::CarState)
-    return a.x==b.x && a.y==b.y && a.vel==b.vel && a.lane_change == b.lane_change && a.id == b.id && a.behavior==b.behavior
+    return a.x==b.x && a.y==b.y && a.vel==b.vel && a.lane_change == b.lane_change && a.id == b.id && a.behavior==b.behavior && a.length==b.length && a.width==b.width
 end
-Base.hash(a::CarState, h::UInt64=zero(UInt64)) = hash(a.vel, hash(a.x, hash(a.y, hash(a.lane_change, hash(a.behavior, hash(a.id, h))))))
+Base.hash(a::CarState, h::UInt64=zero(UInt64)) = hash(a.vel, hash(a.x, hash(a.y, hash(a.lane_change, hash(a.behavior, hash(a.id, hash(a.length, hash(a.width, h))))))))
 "Return a representation that will produce a valid object if executed"
-Base.repr(c::CarState) = "CarState($(c.x),$(c.y),$(c.vel),$(c.lane_change),$(c.behavior),$(c.id))"
+Base.repr(c::CarState) = "CarState($(c.x),$(c.y),$(c.vel),$(c.lane_change),$(c.behavior),$(c.length),$(c.width),$(c.id))"
 
 mutable struct MLState
     x::Float64 # total distance traveled by the ego
@@ -117,15 +119,17 @@ struct CarPhysicalState
     y::Float64 # in units of lane
     vel::Float64
     lane_change::Float64
+    length::Float64
+    width::Float64
     id::Int
 end
 const CarStateObs = CarPhysicalState
 
-==(a::CarPhysicalState, b::CarPhysicalState) = (a.x == b.x) && (a.y == b.y) && (a.vel == b.vel) && (a.lane_change == b.lane_change) && (a.id == b.id)
-Base.hash(a::CarPhysicalState, h::UInt64=zero(UInt64)) = hash(a.x, hash(a.y, hash(a.vel, (hash(a.lane_change, hash(a.id,h))))))
-CarPhysicalState(cs::CarState) = CarPhysicalState(cs.x, cs.y, cs.vel, cs.lane_change, cs.id)
+==(a::CarPhysicalState, b::CarPhysicalState) = (a.x == b.x) && (a.y == b.y) && (a.vel == b.vel) && (a.lane_change == b.lane_change) && (a.length == b.length) && (a.width == b.width) && (a.id == b.id)
+Base.hash(a::CarPhysicalState, h::UInt64=zero(UInt64)) = hash(a.x, hash(a.y, hash(a.vel, (hash(a.lane_change, hash(a.id, hash(a.length, hash(a.width, h))))))))
+CarPhysicalState(cs::CarState) = CarPhysicalState(cs.x, cs.y, cs.vel, cs.lane_change, cs.length, cs.width, cs.id)
 function CarState(cps::CarPhysicalState, behavior::BehaviorModel)
-    return CarState(cps.x, cps.y, cps.vel, cps.lane_change, behavior, cps.id)
+    return CarState(cps.x, cps.y, cps.vel, cps.lane_change, behavior, cps.length, cps.width, cps.id)
 end
 
 struct MLPhysicalState

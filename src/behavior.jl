@@ -171,7 +171,10 @@ function closest_car(dmodel::IDMMOBILModel, s::MLState, nbhd::Array{Int,1}, idx:
 end
 
 function gen_accel(bmodel::AvoidModel, dmodel::IDMMOBILModel, s::MLState, neighborhood::Array{Int,1}, idx::Int, rng::AbstractRNG)
-	closest_car = closest_car(dmodel,s,neighborhood,idx,bmodel.jerk)
+    #ZZZ This function is probably never used
+    print("In gen_accel function")
+
+    closest_car = closest_car(dmodel,s,neighborhood,idx,bmodel.jerk)
 	if closest_car == 0
 		return 0.
 	end

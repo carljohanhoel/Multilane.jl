@@ -103,6 +103,9 @@ end
 
 # to see, run visualize(mdp, s, a, sp, two_frame_crash=true, debug=true)
 function is_crash(mdp::Union{MLMDP{MLState,MLAction},MLPOMDP{MLState,MLAction}}, s::MLState, sp::MLState, debug::Bool=false; warning::Bool=false)
+	#ZZZ This function is probaby never used
+	print("In is_crash function")
+
 	pp = mdp.dmodel.phys_param
 	dt = pp.dt
   nb_col = 2*pp.nb_lanes-1

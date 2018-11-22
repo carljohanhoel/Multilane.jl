@@ -50,7 +50,7 @@ function is_lanechange_dangerous(pp::PhysicalParam, s::MLState, nbhd::Array{Int,
 		return true
 	end
 	#check if will hit car next to you?
-	l_car = pp.l_car
+	l_car = pp.l_car   #ZZZ For now, this is only used as a safety distance below, so doesn't matter too much. For now just kept as one car length.
 
 	dvlf, slf = get_dv_ds(pp,s,nbhd,idx,round(Int, 5+sign(dir)))
 	dvlb, slb = get_dv_ds(pp,s,nbhd,idx,round(Int, 2+sign(dir)))
@@ -149,7 +149,14 @@ function get_dv_ds(pp::PhysicalParam,s::MLState,nbhd::Array{Int,1},idx::Int,idy:
 	#dv: if ahead: me - him; behind: him - me
 	dv = nbr != 0 ? -1*sign((idy-3.5))*(car.vel - s.cars[nbr].vel) : 0.
 
-	ds = nbr != 0 ? abs(s.cars[nbr].x - car.x) - pp.l_car : 1000000.
+	# ds = nbr != 0 ? abs(s.cars[nbr].x - car.x) - pp.l_car : 1000000. #ZZZ Before introducing different vehicle sizes
+	if nbr != 0
+		l_veh = s.cars[nbr].x - car.x > 0 ? car.length : s.cars[nbr].length
+		ds = abs(s.cars[nbr].x - car.x) - l_veh
+	else
+		ds = 1000000.
+	end
+
 
 	return dv::Float64, ds::Float64
 end
@@ -176,7 +183,8 @@ function get_rear_accel(pp::PhysicalParam,s::MLState,nbhd::Array{Int,1},idx::Int
 	#what would the relative velocity, distance be if idx wasn't there
 	dv_behind_, s_behind_ = get_dv_ds(pp, s, nbhd, idx, 2+dir)
 	dv_behind_ += dv_behind
-	s_behind_ += s_behind + pp.l_car
+	s_behind_ += s_behind + s.cars[idx].length
+	# s_behind_ += s_behind + pp.l_car #ZZZ Before introducing different vehicle sizes
 
 	dt = pp.dt
 	# if !(typeof(s.cars[nbhd[5+dir]].behavior) <: IDMMOBILBehavior)

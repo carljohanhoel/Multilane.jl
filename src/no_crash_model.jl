@@ -47,7 +47,7 @@ function NoCrashIDMMOBILModel(nb_cars::Int,
                               behaviors=DiscreteBehaviorSet(IDMMOBILBehavior[IDMMOBILBehavior(x[1],x[2],x[3],idx) for (idx,x) in
                                                  enumerate(Iterators.product(["cautious","normal","aggressive"],
                                                         [pp.v_slow+0.5;pp.v_med;pp.v_fast],
-                                                        [pp.l_car]))], Weights(ones(9))),
+                                                        [pp.l_car]))], Weights(ones(9))),   #ZZZ Fine to use pp.l_car here, since this sets s0 of IDM model, which doesn't matter so much. And is defined elsewhere anyways.
                               init_state_steps = 1000,
                               semantic_actions = true,
                               fix_number_cars = true
@@ -253,7 +253,7 @@ Calculate the maximum safe acceleration that will allow the car to avoid a colli
 function max_safe_acc(mdp::NoCrashProblem, s::Union{MLState,MLObs}, lane_change::Float64=0.0)
     dt = mdp.dmodel.phys_param.dt
     v_min = mdp.dmodel.phys_param.v_min
-    l_car = mdp.dmodel.phys_param.l_car
+    # l_car = mdp.dmodel.phys_param.l_car #ZZZ Before changing to vehicles with different lengths
     bp = mdp.dmodel.phys_param.brake_limit
     ego = s.cars[1]
 
@@ -263,8 +263,10 @@ function max_safe_acc(mdp::NoCrashProblem, s::Union{MLState,MLObs}, lane_change:
     if length(s.cars) > 1
         for i in 2:length(s.cars)#nb_cars
             if occupation_overlap(s.cars[i].y, 0.0, ego.y, lane_change) # occupying same lane
-                gap = s.cars[i].x - ego.x - l_car
-                if gap >= -l_car && gap < smallest_gap
+                # gap = s.cars[i].x - ego.x - l_car
+                l_veh = s.cars[i].x - ego.x > 0 ? ego.length : s.cars[i].length
+                gap = s.cars[i].x - ego.x - l_veh
+                if gap >= -l_veh && gap < smallest_gap
                     car_in_front = i
                     smallest_gap = gap
                 end
@@ -329,14 +331,14 @@ function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
         end
     end
     if isinteger(s.cars[1].y) && a.lane_change != 0.0 #ZZZ Added additional safety margin of one vehicle length
-        l_car = mdp.dmodel.phys_param.l_car
+        # l_car = mdp.dmodel.phys_param.l_car
         for i in 2:length(s.cars)
             car = s.cars[i]
             ego = s.cars[1]
-            if ego.x < car.x - l_car && occupation_overlap(ego.y, a.lane_change, car.y, 0.0)  # ego is behind car
-                gap = car.x - l_car - ego.x
+            if ego.x < car.x - ego.length && occupation_overlap(ego.y, a.lane_change, car.y, 0.0)  # ego is behind car
+                gap = car.x - ego.length - ego.x
                 # if gap <= 0.0
-                if gap <= l_car #ZZZ Added a safety distance of one car length
+                if gap <= mdp.dmodel.phys_param.l_car #ZZZ Added a safety distance of one car length
                     return false
                 end
             end
@@ -345,18 +347,18 @@ function is_safe(mdp::NoCrashProblem, s::Union{MLState,MLObs}, a::MLAction)
     #Check if will crash with rear vehicle
     # check whether we will go into anyone else's lane so close that they might hit us or we might run into them
     if isinteger(s.cars[1].y) && a.lane_change != 0.0
-        l_car = mdp.dmodel.phys_param.l_car
+        # l_car = mdp.dmodel.phys_param.l_car
         for i in 2:length(s.cars)
             car = s.cars[i]
             ego = s.cars[1]
-            if car.x < ego.x + l_car && occupation_overlap(ego.y, a.lane_change, car.y, 0.0)  # ego is in front of car
+            if car.x < ego.x + ego.length && occupation_overlap(ego.y, a.lane_change, car.y, 0.0)  # ego is in front of car
                 # New definition of safe - the car behind can brake at max braking to avoid the ego if the ego
                 # slams on his brakes
                 # XXX IS THIS RIGHT??
                 # I think I need a better definition of "safe" here
-                gap = ego.x - car.x - l_car
+                gap = ego.x - car.x - car.length
                 # if gap <= 0.0
-                if gap <= l_car #ZZZ Added a safety distance of one car length
+                if gap <= mdp.dmodel.phys_param.l_car #ZZZ Added a safety distance of one car length
                     return false
                 end
                 n_braking_acc = nullable_max_safe_acc(gap, car.vel, ego.vel, mdp.dmodel.phys_param.brake_limit, dt)
@@ -488,8 +490,9 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                         jvp = car_j.vel + dt*dvs[j]
                         ixp = car_i.x + dt*(car_i.vel + ivp)/2.0
                         jxp = car_j.x + dt*(car_j.vel + jvp)/2.0
-                        n_max_acc_p = nullable_max_safe_acc(ixp-jxp-pp.l_car, jvp, ivp, pp.brake_limit,dt)
-                        if ixp - jxp <= pp.l_car || car_i.x - car_j.x <= pp.l_car || isnull(n_max_acc_p) || get(n_max_acc_p) < -pp.brake_limit
+                        l_veh_behind = car_j.length
+                        n_max_acc_p = nullable_max_safe_acc(ixp-jxp-l_veh_behind, jvp, ivp, pp.brake_limit,dt)
+                        if ixp - jxp <= l_veh_behind || car_i.x - car_j.x <= l_veh_behind || isnull(n_max_acc_p) || get(n_max_acc_p) < -pp.brake_limit
 
                             # check if they are moving towards each other
                             # if dys[i]*dys[j] < 0.0 && abs(car_i.y+dys[i] - car_j.y+dys[j]) < 2.0
@@ -520,11 +523,11 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                     if j == 1
                         continue # don't check for the ego since the ego does not have noise
                     end
-                    car_i = s.cars[i]
-                    car_j = s.cars[j]
+                    car_i = s.cars[i] #front
+                    car_j = s.cars[j] #behind
 
                     # check if they overlap longitudinally
-                    if car_j.x + dxs[j] > car_i.x + dxs[i] - pp.l_car
+                    if car_j.x + dxs[j] > car_i.x + dxs[i] - car_j.length
 
                         # check if they will be in the same lane
                         if occupation_overlap(car_i.y + dys[i], car_j.y + dys[j])
@@ -534,7 +537,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                                 @show car_i.x
                                 @show car_j.x + dxs[j]
                                 @show car_i.x + dxs[i]
-                                @show pp.l_car
+                                @show car_j.length
                                 @show s.t
                             end
                             @if_debug begin
@@ -556,7 +559,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                                     warn("Car nudged because of crash.")
                                 end
                             end
-                            dxs[j] = car_i.x + dxs[i] - car_j.x - 1.01*pp.l_car
+                            dxs[j] = car_i.x + dxs[i] - car_j.x - 1.01*car_j.length
                             dvs[j] = 2.0*(dxs[j]/dt - car_j.vel)
                         end
                     end
@@ -652,7 +655,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 # sstar is the sstar of the new guy
                 for i in 1:length(sp.cars)
                     lowlane, highlane = occupation_lanes(sp.cars[i].y, 0.0)
-                    back = sp.cars[i].x - pp.l_car
+                    back = sp.cars[i].x - pp.l_car #ZZZ Fine to use l_car here, since it only involces other vehicles
                     if back < clearances[lowlane]
                         clearances[lowlane] = back
                         closest_cars[lowlane] = i
@@ -674,7 +677,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             else
                 for i in 1:length(sp.cars)
                     lowlane, highlane = occupation_lanes(sp.cars[i].y, 0.0)
-                    front = pp.lane_length - (sp.cars[i].x + pp.l_car) # l_car is half the length of the old car plus half the length of the new one
+                    front = pp.lane_length - (sp.cars[i].x + pp.l_car) # l_car is half the length of the old car plus half the length of the new one  #ZZZ Fine to use l_car here, since it only involces other vehicles
                     if front < clearances[lowlane]
                         clearances[lowlane] = front
                         closest_cars[lowlane] = i

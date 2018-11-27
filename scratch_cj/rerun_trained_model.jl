@@ -12,16 +12,16 @@ simple_run = false
 
 tree_in_info = true
 
-sample_to_load = "4181"
+sample_to_load = "7031"
 # network_to_load = "181016_140842_driving_Change_pen_0p01_Loss_weights_1_10_Cpuct_0p1_Remove_10_samples_Only_z_target_No_vehicles"
-network_to_load = "181115_205258_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10"
+network_to_load = "181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 
 
 include("simulation_setup.jl")
 
-hr.max_steps = 10
+# hr.max_steps = 10
 
 ##
 #Possibly add loop here, loop over process
@@ -54,7 +54,7 @@ if sim_problem isa POMDP
     end
 else
     planner = deepcopy(solve(solver, sim_problem))
-    planner.solver.n_iterations = 1
+    # planner.solver.n_iterations = 1
     srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
     planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS
     hist = simulate(hr, sim_problem, planner, s_initial)

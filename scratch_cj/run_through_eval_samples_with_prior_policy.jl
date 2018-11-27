@@ -11,7 +11,7 @@ tree_in_info = false
 ##
 #Code for loading saved networks, running them with only the NN policy and printing the result to a file
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
-network_to_load = "181116_155907_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_No_batchnorm"
+network_to_load = "181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 eval_samples = []
 all_files = readdir(logs_path*network_to_load)
 old_results = ""
@@ -58,7 +58,7 @@ for sample_to_load in eval_samples
         ##
         if sim_problem isa POMDP
             if solver isa MLMPCSolver
-                updater = make_updater(cor, sim_problem, rng_seed)
+                updater = make_updater(cor, sim_problem, rng_seed+2+100*(i-1))
                 planner = deepcopy(policy)
                 srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
                 planner.training_phase = false   #Remove random action exploration, always choose the node that was most visited after the MCTS

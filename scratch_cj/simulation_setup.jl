@@ -40,6 +40,10 @@ else
     include("parameters.jl")
 end
 
+if isdefined(:depth)
+    max_depth = depth
+end
+
 behaviors = standard_uniform(correlation=cor)   #Sets max/min values of IDM and MOBIL and how they are correlated.
 
 ############# TEST ##############
@@ -85,7 +89,7 @@ end
 
 
 
-rng_estimator=MersenneTwister(rng_seed+1)
+rng_estimator=MersenneTwister(rng_seed+1) #Not used
 rng_evaluator=MersenneTwister(rng_seed+2)
 rng_solver=MersenneTwister(rng_seed+3)
 rng_history=MersenneTwister(rng_seed+4)
@@ -116,7 +120,7 @@ if isdefined(:network_to_load)
 end
 
 
-azs = AZSolver(n_iterations=n_iter, depth=depth, exploration_constant=c_puct,
+azs = AZSolver(n_iterations=n_iter, depth=max_depth, exploration_constant=c_puct,
                k_state=k_state,
                tree_in_info=tree_in_info,
                alpha_state=alpha_state,
@@ -183,5 +187,5 @@ else
     # train(trainer, hr, problem, policy)
 end
 
-policy = solve(solver,sim_problem) #Only used for AZ training runs
-srand(policy, rng_seed+5) #Only used for AZ training runs
+policy = solve(solver,sim_problem)
+srand(policy, rng_seed+5)

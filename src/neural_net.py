@@ -91,7 +91,7 @@ class NeuralNetwork:
         N_outputs = self.N_outputs
 
         N_vehicles = 20
-        #N_inputs_ego_vehicle = 3
+        # N_inputs_ego_vehicle = 3
         N_inputs_ego_vehicle = 5
         N_inputs_per_vehicle = 4
         N_conv_filters = 32
@@ -138,6 +138,12 @@ class NeuralNetwork:
         #self.intermediate_layers = {}
         #for i in range(0,20):
         #    self.intermediate_layers[i] = Model(inputs=self.model.input, outputs=self.model.get_layer(index=i).output)
+
+        # #Just for debugging, to get intermediate outputs
+        # self.conv_net1_out = Model(state, [conv_net])
+        # self.conv_net2_out = Model(state, [conv_net2])
+        # self.pool_out = Model(state, [pool])
+        # self.merged_out = Model(state, [merged])
 
     def add_samples_to_memory(self, states, dists, vals):
         idx = self.rm.write_idx

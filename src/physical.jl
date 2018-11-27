@@ -23,10 +23,10 @@ mutable struct PhysicalParam
 end
 
 function PhysicalParam(nb_lanes::Int;dt::Float64=0.75,
-						w_car::Float64=2.0,#1.8,
-						l_car::Float64=4.0,#4.8,
-                        w_truck::Float64=2.0,#1.8,#2.5,
-						l_truck::Float64=4.0,#4.8,#16.5,
+						w_car::Float64=1.8, #2.0,#1.8,
+						l_car::Float64=4.8, #4.0,#4.8,
+                        w_truck::Float64=2.5, #2.0,#1.8,#2.5,
+						l_truck::Float64=12.0, #4.0,#4.8,#16.5,
 						v_nominal::Float64=25.,
 						w_lane::Float64=4.,
 						v_fast::Float64=30.56,

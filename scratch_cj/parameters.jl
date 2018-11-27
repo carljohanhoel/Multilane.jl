@@ -64,15 +64,15 @@ if simple_run
     save_evaluation_history = true
 else
     episode_length = 200
-    replay_memory_max_size = 20000 #ZZZ This should probably be increased since each episode is 200 long. But keep it short to begin with, to see if it learns something.
-    training_start = 5000
-    training_steps = Int(ceil(100000000/n_workers))
+    replay_memory_max_size = 100000 #20000 #Increase to 100,000 (500 episodes)
+    training_start = 20000 #5000 #Increase to 20,000 (100 episodes)
+    training_steps = Int(ceil(10000000000/n_workers))
     n_network_updates_per_sample = 3
     remove_end_samples = 10
     # save_freq = Int(ceil(5000/n_workers))
     # eval_freq = Int(ceil(5000/n_workers))
     # eval_eps = Int(ceil(5/n_workers))
-    save_freq = 5*episode_length
+    save_freq = 1*episode_length
     eval_freq = 5*episode_length
     eval_eps = 1
     save_evaluation_history = true

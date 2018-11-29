@@ -3,12 +3,13 @@ import numpy as np
 import pickle
 from datetime import datetime
 import time
+import copy
 
 sys.path.append('../src/')
 
 from neural_net import NeuralNetwork
 
-#N_ego_states = 3
+# N_ego_states = 3
 N_ego_states = 5
 N_other_vehicle_states = 4
 N_other_vehicles = 20
@@ -38,6 +39,33 @@ t1 = nn.forward_pass(test_state)
 t2 = nn.forward_pass(test_state2)
 assert( (t1[0]== t2[0]).any() )
 assert( (t1[1]== t2[1]).any() )
+
+
+# #Test intermediate layers (working, just uncomment corresponding lines in neural_net.py)
+# test_state_0 = np.zeros([1,N_inputs])
+# conv_net1_out = nn.conv_net1_out.predict(test_state_0)
+#
+# test_state_ = copy.deepcopy(test_state_0)
+# test_state_[0,0:N_ego_states] = np.ones([1,N_ego_states])
+# test_state_[0,N_ego_states:N_ego_states+4] = np.array([[0.3, 0.2, 0.3, -1.0]])
+# conv_net1_out1 = nn.conv_net1_out.predict(test_state_)
+# test_state_[0,N_ego_states+4:N_ego_states+8] = np.array([[0.3, 0.2, 0.3, -1.0]])
+# conv_net1_out2 = nn.conv_net1_out.predict(test_state_)
+# assert( (conv_net1_out1[0,0] == conv_net1_out1[0,1]).any )
+#
+# conv_net2_out = nn.conv_net2_out.predict(test_state_)
+# pool_out = nn.pool_out.predict(test_state_)
+# assert( (conv_net2_out[0,0] == pool_out).any )
+#
+# test_state_2 = copy.deepcopy(test_state_)
+# test_state_2[0,N_ego_states+4:N_ego_states+8] = np.array([[0.6, -0.2, 0.1, 0.8]])
+# conv_net1_out_2 = nn.conv_net1_out.predict(test_state_2)
+# conv_net2_out_2 = nn.conv_net2_out.predict(test_state_2)
+# pool_out_2 = nn.pool_out.predict(test_state_2)
+# assert( (np.maximum(conv_net2_out_2[0,0],conv_net2_out_2[0,1]) == pool_out_2).any )
+#
+# merged_out = nn.merged_out.predict(test_state_2)
+
 
 
 

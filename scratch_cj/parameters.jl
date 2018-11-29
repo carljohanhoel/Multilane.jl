@@ -1,4 +1,4 @@
-@show scenario = "continuous_driving"
+# @show scenario = "continuous_driving"
 @show problem_type = "mdp"
 
 ## Problem definition
@@ -20,18 +20,24 @@ if scenario == "continuous_driving"
     v_des = 25.0
 
     rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, lambda=lambda)
-elseif scenario == "forced_lane_changes" #ZZZ deprecated
+elseif scenario == "exit_lane"
     cor = 0.75
-    lambda = 1.0
+    lambda = 0.0
+    lane_change_cost = 0.03
 
     nb_lanes = 4
-    lane_length = 100.
-    nb_cars = 10
+    lane_length = 600.
+    nb_cars = 20
+    sensor_range = 200.
+    @show obs_behaviors = false
 
-    initSteps = 200
+    initSteps = 250
+    exit_distance = 1000.   #Distance to exit lane
+                            #Note! In some places, this is used to identify if exit_lane scenario is used.
+                            #Fixes needed if setting it higher than 5000
 
-    v_des = 35.0
-    rmodel = SuccessReward(lambda=lambda)
+    v_des = 25.0
+    rmodel = SpeedReward(v_des=v_des, lane_change_cost=lane_change_cost, target_lane = 1, lambda=lambda)
 end
 
 
@@ -48,7 +54,7 @@ max_depth = 20 #Just used for MCTS-DPW, not AZ
 @show noise_eps = 0.25
 
 if simple_run
-    episode_length = 20
+    episode_length = 200
     n_iter = 20
     replay_memory_max_size = 200
     training_start = 100

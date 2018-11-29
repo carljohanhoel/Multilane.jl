@@ -98,6 +98,16 @@ function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{ML
         r -= mdp.rmodel.lambda
     end
 
+    if mdp.rmodel.target_lane < 5 #exit lane scenario
+        if !isnull(sp.terminal)
+            if sp.cars[1].y == mdp.rmodel.target_lane
+                r = 20
+            else
+                r = 0
+            end
+        end
+    end
+
     # r += sp.cars[1].y == 4 ? 1 : 0 #Just for testing
 
     return r
@@ -106,8 +116,13 @@ end
 function max_min_cum_reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLPhysicalState, D, SpeedReward}, MLPOMDP{MLState, MLAction, MLState, D, SpeedReward} }) where D<:AbstractMLDynamicsModel
     #Not properly defined, but fine for now
     # v_min = 0
-    v_min = 0.5/(1-mdp.discount)
-    v_max = 1/(1-mdp.discount)
+    if mdp.rmodel.target_lane == 1     #Exit lane case
+        v_min = 0.
+        v_max = 1/(1-mdp.discount)
+    else                                #Continuous driving case
+        v_min = 0.5/(1-mdp.discount)
+        v_max = 1/(1-mdp.discount)
+    end
     return [v_min, v_max]
 end
 

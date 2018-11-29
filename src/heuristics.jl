@@ -27,7 +27,7 @@ function action(p::Simple,s::Union{MLState,MLObs})
     goal_lane = p.mdp.rmodel.target_lane
     y_desired = goal_lane
     dmodel = p.mdp.dmodel
-    lc = sign(y_desired-s.cars[1].y) * dmodel.lane_change_rate
+    lc = sign(y_desired-s.cars[1].y)# * dmodel.lane_change_rate
     acc = dmodel.adjustment_acceleration
 
     #if can't move towards desired lane sweep through accelerating and decelerating
@@ -115,22 +115,27 @@ action(p::DeterministicBehaviorPolicy, b::BehaviorParticleBelief, a::MLAction=ML
 
 mutable struct IDMLaneSeekingSolver <: Solver
     b::BehaviorModel
-    rng::AbstractRNG
+    # rng::AbstractRNG
 end
 
 mutable struct IDMLaneSeekingPolicy <: Policy
     problem::NoCrashProblem
     b::BehaviorModel
-    rng::AbstractRNG
+    # rng::AbstractRNG
 end
-solve(s::IDMLaneSeekingSolver, p::NoCrashProblem) = IDMLaneSeekingPolicy(p, s.b, s.rng)
+solve(s::IDMLaneSeekingSolver, p::NoCrashProblem) = IDMLaneSeekingPolicy(p, s.b)#, s.rng)
 
 function action(p::IDMLaneSeekingPolicy, s::MLState, a::MLAction=MLAction(0.0,0.0,0.0))
     nbhd = get_neighborhood(p.problem.dmodel.phys_param, s, 1)
-    acc = gen_accel(p.b, p.problem.dmodel, s, nbhd, 1, p.rng)
-    # try to positive lanechange
-    # lc = problem.dmodel.lane_change_rate * !is_lanechange_dangerous(pp,s,nbhd,1,1)
-    lc = p.problem.dmodel.lane_change_rate
+    acc = gen_accel(p.b, p.problem.dmodel, s, nbhd, 1)#, p.rng)
+    ## try to positive lanechange
+    ## lc = problem.dmodel.lane_change_rate * !is_lanechange_dangerous(pp,s,nbhd,1,1)
+    # lc = p.problem.dmodel.lane_change_rate
+    if s.cars[1].y > 1.0
+        lc = -1.0 #Try to change to the right
+    else
+        lc = 0.0
+    end
     if is_safe(p.problem, s, MLAction(acc, lc,0.0))
         return MLAction(acc, lc,0.0)
     end

@@ -20,6 +20,9 @@ using Images
 #For tree viz
 using D3Trees
 
+# @show scenario = "continuous_driving"
+@show scenario = "exit_lane"
+
 # simple_run = true
 simple_run = false
 n_workers = 1
@@ -42,12 +45,15 @@ pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range,
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
-                              lane_terminate=true,
+                              lane_terminate=false,
                               max_dist=30000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
                               vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
                               init_state_steps = initSteps,
                               semantic_actions = true
                              )
+if scenario=="exit_lane"
+    dmodel.max_dist = exit_distance
+end
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
@@ -64,14 +70,16 @@ end
 
 
 # Solver definition
-if scenario == "continuous_driving"
-    rollout_problem = deepcopy(problem)
-    rollout_problem.dmodel.semantic_actions = false
-    rollout_problem.dmodel.max_dist = Inf
-    rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
-    rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
-elseif scenario == "forced_lane_changes"
-    rollout_policy = SimpleSolver()
+# For both cases
+rollout_problem = deepcopy(problem)
+rollout_problem.dmodel.semantic_actions = false
+rollout_problem.dmodel.max_dist = Inf
+rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
+if scenario == "exit_lane"
+    # rollout_policy = SimpleSolver()
+    rollout_beh = IDMLaneSeekingSolver(rollout_behavior)
+    rollout_policy = solve(rollout_beh,mdp)
 end
 
 idle_problem = deepcopy(problem)
@@ -139,6 +147,7 @@ srand(policy, rng_seed+5)
 ## Run simulations
 N = 20
 for i in 1:N
+# i=3
     # Reset rng:s
     rng_evaluator_copy=MersenneTwister(Int(rng_evaluator.seed[1])+100*(i-1))
     rng_history_copy=MersenneTwister(Int(rng_history.seed[1])+100*(i-1))
@@ -193,10 +202,30 @@ for i in 1:N
     @show hist.state_hist[end].x
     @show hist_ref.state_hist[end].x
     @show hist_idle.state_hist[end].x
+    if scenario == "exit_lane"
+        @show hist.state_hist[end].t
+        println(hist.state_hist[end].cars[1].y == 1.0)
+        @show hist_ref.state_hist[end].t
+        println(hist_ref.state_hist[end].cars[1].y == 1.0)
+        @show hist_idle.state_hist[end].t
+        println(hist_idle.state_hist[end].cars[1].y == 1.0)
+    end
 
-    open("./Logs/dpwAndRefAndIdleModelsDistance"*start_time*".txt","a") do f
+
+    if scenario == "continuous_driving"
+        logname = "dpwAndRefAndIdleModelsDistance"
+    elseif scenario == "exit_lane"
+        logname = "exit_dpwAndRefAndIdleModelsDistance"
+    end
+    open("./Logs/dpwAndRefAndIdleModelsDistance_"*scenario*"_"*start_time*".txt","a") do f
         # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
-        writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+        if scenario == "continuous_driving"
+            writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+        elseif scenario == "exit_lane"
+            writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x,
+                             hist.state_hist[end].t, hist_ref.state_hist[end].t, hist_idle.state_hist[end].t, hist.state_hist[end].t-(hist.state_hist[end].x-dmodel.max_dist)/hist.state_hist[end].cars[1].vel, hist_ref.state_hist[end].t-(hist_ref.state_hist[end].x-dmodel.max_dist)/hist_ref.state_hist[end].cars[1].vel, hist_idle.state_hist[end].t-(hist_idle.state_hist[end].x-dmodel.max_dist)/hist_idle.state_hist[end].cars[1].vel,
+                             hist.state_hist[end].cars[1].y, hist_ref.state_hist[end].cars[1].y, hist_idle.state_hist[end].cars[1].y, hist.state_hist[end].cars[1].y==1.0 *1, hist_ref.state_hist[end].cars[1].y==1.0 *1, hist_idle.state_hist[end].cars[1].y==1.0 *1 ]], " ")
+        end
     end
 
     # open("./Logs/refModelResults2_.txt","a") do f
@@ -221,7 +250,7 @@ for i in 1:N
     @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
         push!(frames, visualize(problem, s, r))
     end
-    gifname = "./Figs/dpw_i"*string(i)*"_"*start_time*".ogv"
+    gifname = "./Figs/"*scenario*"_dpw_i"*string(i)*"_"*start_time*".ogv"
     write(gifname, frames)
 
 
@@ -230,7 +259,7 @@ for i in 1:N
     @showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
         push!(frames, visualize(problem, s, r))
     end
-    gifname = "./Figs/refModel_i"*string(i)*"_"*start_time*".ogv"
+    gifname = "./Figs/"*scenario*"_refModel_i"*string(i)*"_"*start_time*".ogv"
     write(gifname, frames)
     #
     #Idle model
@@ -238,7 +267,7 @@ for i in 1:N
     @showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
         push!(frames, visualize(problem, s, r))
     end
-    gifname = "./Figs/idleModel_i"*string(i)*"_"*start_time*".ogv"
+    gifname = "./Figs/"*scenario*"_idleModel_i"*string(i)*"_"*start_time*".ogv"
     write(gifname, frames)
 
 

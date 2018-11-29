@@ -23,10 +23,13 @@ using Images
 using D3Trees
 ##
 
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
+
 #Code for loading saved evaluation history, visualizing MCTS tree and producing video
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 # log_dir = "181016_152419_driving_Change_pen_0p01_Loss_weights_1_100_Cpuct_0p1_Remove_10_samples_Only_z_target"
-log_dir = logs_path*"181016_152419_driving_Change_pen_0p01_Loss_weights_1_100_Cpuct_0p1_Remove_10_samples_Only_z_target"
+log_dir = logs_path*"181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 eval_files = []
 all_files = readdir(log_dir)
 for file_name in all_files
@@ -59,12 +62,15 @@ pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range,
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
-                              lane_terminate=true,
+                              lane_terminate=false,
                               max_dist=30000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
                               vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
                               init_state_steps = initSteps,
                               semantic_actions = true
                              )
+if scenario=="exit_lane"
+    dmodel.max_dist = exit_distance
+end
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)

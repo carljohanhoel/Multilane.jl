@@ -4,6 +4,9 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
+
 # parallel_version = true   #Test code in parallel mode
 parallel_version = false
 
@@ -12,7 +15,7 @@ simple_run = false
 
 tree_in_info = true
 
-sample_to_load = "7031"
+sample_to_load = "10071"
 # network_to_load = "181016_140842_driving_Change_pen_0p01_Loss_weights_1_10_Cpuct_0p1_Remove_10_samples_Only_z_target_No_vehicles"
 network_to_load = "181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 

@@ -54,12 +54,15 @@ pp = PhysicalParam(nb_lanes, lane_length=lane_length, sensor_range=sensor_range,
 dmodel = NoCrashIDMMOBILModel(nb_cars, pp,   #First argument is number of cars
                               behaviors=behaviors,
                               p_appear=1.0,
-                              lane_terminate=true,
+                              lane_terminate=false,
                               max_dist=30000.0, #1000.0, #ZZZ Remember that the rollout policy must fit within this distance (Not for exit lane scenario)
                               vel_sigma = 0.5,   #0.0   #Standard deviation of speed of inserted cars
                               init_state_steps = initSteps,
                               semantic_actions = true
                              )
+if scenario=="exit_lane"
+    dmodel.max_dist = exit_distance
+end
 mdp = NoCrashMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Third argument is discount factor
 pomdp = NoCrashPOMDP{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)   #Fifth argument semantic action space
 pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.95, false)
@@ -76,14 +79,16 @@ end
 
 
 # Solver definition
-if scenario == "continuous_driving"
-    rollout_problem = deepcopy(problem)
-    rollout_problem.dmodel.semantic_actions = false
-    rollout_problem.dmodel.max_dist = Inf
-    rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
-    rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
-elseif scenario == "forced_lane_changes"
-    rollout_policy = SimpleSolver()
+# For both cases
+rollout_problem = deepcopy(problem)
+rollout_problem.dmodel.semantic_actions = false
+rollout_problem.dmodel.max_dist = Inf
+rollout_behavior = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, v_des, 2.0, 4.0), MOBILParam(0.5, 2.0, 0.1), 1)
+rollout_policy = Multilane.DeterministicBehaviorPolicy(rollout_problem, rollout_behavior, false)
+if scenario == "exit_lane"
+    # rollout_policy = SimpleSolver()
+    rollout_beh = IDMLaneSeekingSolver(rollout_behavior)
+    rollout_policy = solve(rollout_beh,mdp)
 end
 
 

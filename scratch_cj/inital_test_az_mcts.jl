@@ -4,6 +4,9 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
+# @show scenario = "continuous_driving"
+@show scenario = "exit_lane"
+
 parallel_version = true   #Test code in parallel mode
 # parallel_version = false
 

@@ -37,7 +37,8 @@ end
 function visualize(p, s, r; tree=nothing)
     pp = p.dmodel.phys_param
     stuff = []
-    roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
+    # roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
+    roadway = gen_straight_roadway(pp.nb_lanes, pp.lane_length/2+p.dmodel.max_dist, lane_width=pp.w_lane)
     push!(stuff, roadway)
     str = @sprintf("t: %6.2f\nx: %6.2f\nvel: %6.2f", s.t, s.x, s.cars[1].vel)
     if r != nothing
@@ -71,7 +72,8 @@ end
 function visualize_with_nn(p, s, a, r, values, p0_vec, p0_vec_all_actions, p_nn, p_tree; tree=nothing)
     pp = p.dmodel.phys_param
     stuff = []
-    roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
+    # roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
+    roadway = gen_straight_roadway(pp.nb_lanes, pp.lane_length/2+p.dmodel.max_dist, lane_width=pp.w_lane)
     push!(stuff, roadway)
 
     if a.lane_change == 0.

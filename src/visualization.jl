@@ -127,11 +127,12 @@ function visualize_with_nn(p, s, a, r, values, p0_vec, p0_vec_all_actions, p_nn,
     for (i,c) in enumerate(s.cars)
         if i == 1
             color = colorant"green"
+            ac = ArrowCar([c.x+s.x+c.length/2, (c.y-1.0)*pp.w_lane], id=i, color=color, length=c.length, width=c.width)
         else
             agg = aggressiveness(Multilane.STANDARD_CORRELATED, c.behavior)
             color = weighted_color_mean(agg, colorant"red", colorant"blue")
+            ac = ArrowCar([c.x+s.x+c.length/2, (c.y-1.0)*pp.w_lane], id=i, color=color, length=c.length, width=c.width)
         end
-        ac = ArrowCar([c.x+s.x+c.length/2, (c.y-1.0)*pp.w_lane], id=i, color=color)
         push!(stuff, ac)
     end
 

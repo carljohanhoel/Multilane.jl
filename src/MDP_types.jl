@@ -202,7 +202,7 @@ function convert_state(state::Vector{MLState}, dmodel::AbstractMLDynamicsModel)
         # nb_ego_states = 3
         nb_ego_states = 5
     else                       #exit_lane case
-        nb_ego_states = 6
+        nb_ego_states = 7
     end
     nb_car_states = 4
     converted_state = Array{Float64}(n,nb_ego_states+nb_cars*nb_car_states)
@@ -232,8 +232,9 @@ function convert_state(state::MLState, dmodel::AbstractMLDynamicsModel, nb_ego_s
     converted_state[3] = state.cars[1].lane_change
     converted_state[4] = (state.cars[1].behavior.p_idm.v0 - bias_v_ego) / norm_v_ego
     converted_state[5] = (state.cars[1].behavior.p_idm.T - bias_T_ego) / norm_T_ego
-    if nb_ego_states == 6 #exit_lane case
+    if nb_ego_states == 7 #exit_lane case
         converted_state[6] = ((dmodel.max_dist-state.x) - bias_d_exit) / norm_d_exit
+        converted_state[7] = isnull(state.terminal) ? 0 : 1
     end
     for (i,car) in enumerate(state.cars[2:end])
         converted_state[nb_ego_states+1+4*(i-1)] = (car.x-state.cars[1].x) / norm_x   #Relative longitudinal position

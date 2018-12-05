@@ -108,7 +108,7 @@ function visualize_with_nn(p, s, a, r, values, p0_vec, p0_vec_all_actions, p_nn,
             str *= @sprintf(" ")
         end
         str *= @sprintf("%6.2f   %6.2f %6.2f %6.2f %6.2f %6.2f   %6.2f %6.2f %6.2f %6.2f %6.2f",
-                        values[i], p0_vec[11-i][1], p0_vec[11-i][2], p0_vec[11-i][3], p0_vec[11-i][4], p0_vec[11-i][5],
+                        values[11-i], p0_vec[11-i][1], p0_vec[11-i][2], p0_vec[11-i][3], p0_vec[11-i][4], p0_vec[11-i][5],
                          p0_vec_all_actions[11-i][1], p0_vec_all_actions[11-i][2], p0_vec_all_actions[11-i][3], p0_vec_all_actions[11-i][4], p0_vec_all_actions[11-i][5])
         if mod(i-1,3)==0
          str *= @sprintf(" %d", 4-(i-1)/3)

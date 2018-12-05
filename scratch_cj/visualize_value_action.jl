@@ -3,7 +3,7 @@
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 0.0
+t = 43.5
 step = convert(Int, t / pp.dt) + 1
 
 state_t = deepcopy(hist.state_hist[step])

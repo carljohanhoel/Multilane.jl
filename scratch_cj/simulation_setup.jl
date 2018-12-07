@@ -94,10 +94,10 @@ end
 
 
 
-rng_estimator=MersenneTwister(rng_seed+1) #Not used
+# rng_estimator=MersenneTwister(rng_seed+1) #Not used
 rng_evaluator=MersenneTwister(rng_seed+2)
-rng_solver=MersenneTwister(rng_seed+3)
-rng_history=MersenneTwister(rng_seed+4)
+rng_solver=MersenneTwister(rng_seed+4)     #This should correspond to what's in trainer eval eps to be able to compare
+rng_history=MersenneTwister(rng_seed+3)    #This should correspond to what's in trainer eval eps to be able to compare
 rng_trainer=MersenneTwister(rng_seed+5)
 
 some_state = initial_state(problem, initSteps=0)
@@ -117,7 +117,7 @@ if parallel_version
    sleep(3) #Wait for queue to be set up before continuing
    clear_queue()
 else
-   estimator = NNEstimator(rng_estimator, estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
+   estimator = NNEstimator(estimator_path, log_path, n_s, n_a, v_min, v_max, replay_memory_max_size, training_start)
 end
 
 if isdefined(:network_to_load)
@@ -193,4 +193,3 @@ else
 end
 
 policy = solve(solver,sim_problem)
-srand(policy, rng_seed+5)

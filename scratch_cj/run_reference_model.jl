@@ -20,8 +20,8 @@ using Images
 #For tree viz
 using D3Trees
 
-# @show scenario = "continuous_driving"
-@show scenario = "exit_lane"
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
 
 # simple_run = true
 simple_run = false
@@ -102,10 +102,9 @@ dpws = DPWSolver(depth=max_depth,
                 )
 
 
-rng_estimator=MersenneTwister(rng_seed+1) #Not used
 rng_evaluator=MersenneTwister(rng_seed+2)
-rng_solver=MersenneTwister(rng_seed+3)
-rng_history=MersenneTwister(rng_seed+4)
+rng_solver=MersenneTwister(rng_seed+4)     #This should correspond to what's in trainer eval eps to be able to compare
+rng_history=MersenneTwister(rng_seed+3)    #This should correspond to what's in trainer eval eps to be able to compare
 rng_trainer=MersenneTwister(rng_seed+5)
 
 

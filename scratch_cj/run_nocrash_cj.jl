@@ -52,7 +52,7 @@ pomdp_lr = NoCrashPOMDP_lr{typeof(rmodel), typeof(behaviors)}(dmodel, rmodel, 0.
 
 i=3
 rng_evaluator=MersenneTwister(rng_seed+2 +100*(i-1))
-rng_history=MersenneTwister(rng_seed+4 +100*(i-1))
+rng_history=MersenneTwister(rng_seed+3 +100*(i-1))
 
 
 v_des = 25.0

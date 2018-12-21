@@ -101,9 +101,10 @@ function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{ML
     if mdp.rmodel.target_lane < 5 #exit lane scenario
         if !isnull(sp.terminal)
             if sp.cars[1].y == mdp.rmodel.target_lane
-                r = 20
+                r = r + 19. #20
+                # r = 20.
             else
-                r = 0
+                r = 0.
             end
         end
     end

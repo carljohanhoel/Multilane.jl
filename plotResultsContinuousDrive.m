@@ -14,18 +14,21 @@ clear all
 % logName = './Logs/181115_205959_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Mean_z_q_target/evalResults2.txt';
 % logName = './Logs/181116_155907_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_No_batchnorm/evalResults2.txt';
 
-%
-logName = './Logs/181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state/evalResults2.txt';
+% %
+% logName = './Logs/181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state/evalResults2.txt';
 % logName = './Logs/181120_104942_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state_Lane_change_4_samples/evalResults2.txt';
 
 %truck size
 logName = './Logs/181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim/evalResults2.txt';
-% logName = './Logs/181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10/evalResults2.txt';
+logName = './Logs/181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10/evalResults2.txt';
+logName = './Logs/181215_123610_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Bigger_net/evalResults2.txt';
 
 
 
-
-% nWorkers = 4;
+%100 eval runs
+% logName = './Logs/181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10/Reruns/evalResults2_.txt';
+% evalRuns = true;
+evalRuns = false;
 
 data = dlmread(logName,' ');
 
@@ -55,6 +58,9 @@ for i=1:size(data,1)/m
         idx = 1;
     end
     idx = round(idx);
+    if evalRuns
+        idx = 1;
+    end
 %     idx = (step(i)-1)/(evalEpisodePeriod*episodeLength);
     sortedData(worker(i)-2,1,idx) = idx;            %sortedData dims: worker #, property, generation
     sortedData(worker(i)-2,2,idx) = sum_reward(i);
@@ -121,6 +127,10 @@ for i=1:size(stepCount,2)
     k = k + stepCount(i);
 end
 
+if evalRuns
+    totalStepsVec = totalStepsVec+10000;
+end
+
 nWorkers = stepCount(1);
 nSimSteps = size(reward(1,:),2)-1;
 
@@ -152,9 +162,18 @@ end
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance.txt');
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance181020_185045.txt');
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance181024_155626_.txt');
-rm = load('./Logs/dpwAndRefAndIdleModelsDistance181120_115958_.txt'); %"Original, for car size simulations"
+% rm = load('./Logs/dpwAndRefAndIdleModelsDistance181120_115958_.txt'); %"Original, for car size simulations"
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance181122_092739_lane_change_4_samples.txt');
-rm = load('./Logs/dpwAndRefAndIdleModelsDistance181126_160317_truck_size.txt');
+% rm = load('./Logs/dpwAndRefAndIdleModelsDistance181126_160317_truck_size.txt'); %Wrong, used the wrong rng:s
+rm = load('./Logs/dpwAndRefAndIdleModelsDistance_continuous_driving_181207_160323_.txt'); %Correrct currently used
+rm = load('./Logs/dpwAndRefAndIdleModelsDistance_continuous_driving_181212_121702_.txt'); %Same as one above, but including action statistics
+
+
+if evalRuns
+    rm = load('./Logs/dpwAndRefAndIdleModelsDistance_continuous_driving_181213_090751_100evalRuns.txt');
+end
+
+
 
 dpwReward = rm(:,2);
 dpwDistance = rm(:,5);
@@ -163,20 +182,33 @@ refDistance = rm(:,6);
 idleReward = rm(:,4);
 idleDistance = rm(:,7);
 
+if size(rm,2)>7
+    actionsDpw = rm(:,8:12);
+    actionsRef = rm(:,13:15);
+    disp('MCTS: ')
+    disp( mean(actionsDpw,1)/200 )
+    disp('IDM/MOBIL: ')
+    disp( mean(actionsRef,1)/200 )   %Remember that some episodes are weird, changing lanes too many times. Manually fix there.
+end
+
 
 normIdleDistance = idleDistance./refDistance;
 normDpwDistance = dpwDistance./refDistance;
 
-normDistance = squeeze(sortedData(1:20,3,:))'./refDistance';
+normDistance = squeeze(sortedData(:,3,:))'./refDistance';
 
 
 normWrtDpwIdle = idleDistance./dpwDistance;
 normWrtDpwRef = refDistance./dpwDistance;
-normWrtDpwAz = squeeze(sortedData(1:20,3,:))'./dpwDistance';
+normWrtDpwAz = squeeze(sortedData(:,3,:))'./dpwDistance';
 
 normWrtIdleRef = refDistance./idleDistance;
-normWrtIdleAz = squeeze(sortedData(1:20,3,:))'./idleDistance';
+normWrtIdleAz = squeeze(sortedData(:,3,:))'./idleDistance';
 normWrtIdleDpw = dpwDistance./idleDistance;
+
+normWrtIdle25 = 25*200*0.75./idleDistance;
+normWrtRef25 = 25*200*0.75./refDistance;
+normWrtDpw25 = 25*200*0.75./dpwDistance;
 
 
 %% NN policy
@@ -184,11 +216,11 @@ nnActions = [];
 if exist([logName(1:end-16),'prior_policy_result.txt'],'file')
     nn = load([logName(1:end-16),'prior_policy_result.txt']);
 
-    for i=1:size(nn,1)/20
-        nnReward(i,:) = nn(20*(i-1)+1:20*i,3)';
-        nnDistance(i,:) = nn(20*(i-1)+1:20*i,4)';
-        nnActions(i,:,:) = nn(20*(i-1)+1:20*i,5:9);
-        nnSample(i) = nn(20*(i-1)+1,2)*20;
+    for i=1:size(nn,1)/nWorkers
+        nnReward(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,3)';
+        nnDistance(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,4)';
+        nnActions(i,:,:) = nn(nWorkers*(i-1)+1:nWorkers*i,5:9);
+        nnSample(i) = nn(nWorkers*(i-1)+1,2)*nWorkers;
     end
     
     %sorting
@@ -256,7 +288,7 @@ plot(totalStepsVec,mean(dpwDistance)/nSimSteps/dt*ones(1,length(step)),'m')
 plot(totalStepsVec,mean(refDistance)/nSimSteps/dt*ones(1,length(step)),'g')
 plot(totalStepsVec,mean(idleDistance)/nSimSteps/dt*ones(1,length(step)),'r')
 plot(totalStepsVec,x(:,end)/nSimSteps/dt,'bx')
-plot(totalSteps,squeeze(mean(sortedData(1:20,3,:),'omitnan'))/nSimSteps/dt,'b')         %ZZZ Manually set to use 20 workers
+plot(totalSteps,squeeze(mean(sortedData(:,3,:),'omitnan'))/nSimSteps/dt,'b')         %ZZZ Manually set to use 20 workers
 
 if exist([logName(1:end-16),'prior_policy_result.txt'],'file')% && size(totalSteps(2:end),2) == size(nnDistance,1)
     plot(nnSample-2000,nnDistance/nSimSteps/dt,'co')
@@ -356,7 +388,7 @@ for i=1:size(sortedData,1)
 end
 % plot(squeeze(sortedData(i,1,:)),squeeze(mean(sortedData(:,2,:),1,'omitnan')),'r--x')
 plot(totalSteps,squeeze(mean(sortedData(:,2,:),1,'omitnan')),'r--x')
-plot(totalSteps,squeeze(mean(sortedData(1:20,2,:),1,'omitnan')),'b--x')
+plot(totalSteps,squeeze(mean(sortedData(:,2,:),1,'omitnan')),'b--x')
 title('Reward for all the workers over generations')
 
 % Distance for all the workers over generations
@@ -367,7 +399,7 @@ for i=1:size(sortedData,1)
     plot(totalSteps,squeeze(sortedData(i,3,:)))
 end
 plot(totalSteps,squeeze(mean(sortedData(:,3,:),1,'omitnan')),'r--x')
-plot(totalSteps,squeeze(mean(sortedData(1:20,3,:),1,'omitnan')),'b--x')
+plot(totalSteps,squeeze(mean(sortedData(:,3,:),1,'omitnan')),'b--x')
 title('Distance for all the workers over generations')
 
 

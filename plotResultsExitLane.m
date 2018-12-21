@@ -2,43 +2,19 @@ clc
 clear all
 % close all
 
-% Fixed maxpool in NN
-
-% logName = './Logs/181024_154644_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03/evalResults2.txt';
-% logName = './Logs/181024_155209_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03_Update_3_times_per_sample/evalResults2.txt';
-
-% logName = './Logs/181101_171935_driving_Change_pen_0p03_Loss_weights_1_100_Cpuct_0p1_Fixed_maxpool_Change_back_pen_0p03_Update_3_times_per_sample_More_dpw/evalResults2.txt';
-
-%Added lane change in ego state
-% logName = './Logs/181115_205258_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10/evalResults2.txt';
-% logName = './Logs/181115_205959_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Mean_z_q_target/evalResults2.txt';
-% logName = './Logs/181116_155907_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_No_batchnorm/evalResults2.txt';
-
-%
-logName = './Logs/181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state/evalResults2.txt';
-% logName = './Logs/181120_104942_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state_Lane_change_4_samples/evalResults2.txt';
-
-%truck size
-logName = './Logs/181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim/evalResults2.txt';
-% logName = './Logs/181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10/evalResults2.txt';
-
-
 %Exit lane
-logName = './Logs/181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim/evalResults2.txt';
+% logName = './Logs/181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim/evalResults2.txt';
 logName = './Logs/181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0/evalResults2.txt';
+logName = './Logs/181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19/evalResults2.txt';
 
-
-% nWorkers = 4;
 
 data = dlmread(logName,' ');
 
-episodeLength = 200;
-evalEpisodePeriod = 5; %1;
+evalFreq = 1000;
 firstEval = 1001; %401;
-
 exitPos = 1000;
 
-m = 9;
+m = 9; %Number of lines for each worker and eval run
 for i=1:size(data,1)/m
     worker(i) = data((i-1)*m+1,1);
     step(i) = data((i-1)*m+1,2);
@@ -60,22 +36,19 @@ for i=1:size(data,1)/m
     v_end = v(i,i_end);
     T = T_ - (x_end-exitPos)/v_end;
 
-    idx = (step(i)-firstEval+evalEpisodePeriod*episodeLength)/(evalEpisodePeriod*episodeLength)+1;
+    idx = (step(i)-firstEval+evalFreq)/evalFreq+1;
     if idx < 1.5
         idx = 1;
     end
     idx = round(idx);
-%     idx = (step(i)-1)/(evalEpisodePeriod*episodeLength);
+
     sortedData(worker(i)-2,1,idx) = idx;            %sortedData dims: worker #, property, generation
     sortedData(worker(i)-2,2,idx) = sum_reward(i);
-%     sortedData(worker(i)-2,3,idx) = x(i,end);
     sortedData(worker(i)-2,3,idx) = max(x(i,:));
     sortedData(worker(i)-2,4:9,idx) = hist(a(i,:),[0 1 2 3 4 5]);
     sortedData(worker(i)-2,10,idx) = T; %Time to exit
     sortedData(worker(i)-2,11,idx) = y(i,i_end)==1; %Exit reached
     sortedData(worker(i)-2,12,idx) = sum(reward(i,1:i_end-2),2,'omitnan'); %Sum reward except for last one
-    
-    
 end
 %Replace zeros in reward and x with nans
 tmp = sortedData(:,1:3,:);
@@ -151,9 +124,10 @@ end
 
 
 
-
 %% Ref model
 rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181129_103940_exit_lane.txt');
+rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181207_160457_.txt');
+
 
 dpwReward = rm(:,2);
 dpwDistance = rm(:,5);
@@ -177,9 +151,7 @@ idleSuccess = rm(:,19);
 
 normIdleTime = idleCorrectedTime./refCorrectedTime;
 normDpwTime = dpwCorrectedTime./refCorrectedTime;
-
 normTime = squeeze(sortedData(:,10,:))'./refCorrectedTime';
-
 
 normWrtDpwIdle = idleCorrectedTime./dpwCorrectedTime;
 normWrtDpwRef = refCorrectedTime./dpwCorrectedTime;
@@ -195,11 +167,15 @@ nnActions = [];
 if exist([logName(1:end-16),'prior_policy_result.txt'],'file')
     nn = load([logName(1:end-16),'prior_policy_result.txt']);
 
-    for i=1:size(nn,1)/20
-        nnReward(i,:) = nn(20*(i-1)+1:20*i,3)';
-        nnDistance(i,:) = nn(20*(i-1)+1:20*i,4)';
-        nnActions(i,:,:) = nn(20*(i-1)+1:20*i,5:9);
-        nnSample(i) = nn(20*(i-1)+1,2)*20;
+    for i=1:size(nn,1)/nWorkers
+        nnReward(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,3)';
+        nnDistance(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,4)';
+        nnActions(i,:,:) = nn(nWorkers*(i-1)+1:nWorkers*i,5:9);
+        nnSample(i) = nn(nWorkers*(i-1)+1,2)*nWorkers;
+        nnTime(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,10)';
+        nnCorrectedTime(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,11)';
+        nnEndLane(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,12)';
+        nnSuccess(i,:) = nn(nWorkers*(i-1)+1:nWorkers*i,13)';
     end
     
     %sorting
@@ -207,11 +183,17 @@ if exist([logName(1:end-16),'prior_policy_result.txt'],'file')
     nnReward = nnReward(idx,:);
     nnDistance = nnDistance(idx,:);
     nnActions = nnActions(idx,:,:);
+    nnTime = nnTime(idx,:);
+    nnCorrectedTime = nnCorrectedTime(idx,:);
+    nnEndLane = nnEndLane(idx,:);
+    nnSuccess = nnSuccess(idx,:);
     
+    normNnTime = nnCorrectedTime./refCorrectedTime';
+    normWrtDpwNn = nnCorrectedTime./dpwCorrectedTime';
 
-    normNnDistance = nnDistance./refDistance';
-    normWrtDpwNn = nnDistance./dpwDistance';
-    normWrtIdleNn = nnDistance./idleDistance';
+%     normNnDistance = nnDistance./refDistance';
+%     normWrtDpwNn = nnDistance./dpwDistance';
+%     normWrtIdleNn = nnDistance./idleDistance';
 end
 
 disp('Average number of actions per episode for the generations with NN policy: ')
@@ -239,6 +221,9 @@ clf(1)
 hold on
 solvedScenarios = squeeze(sortedData(:,11,:));
 plot(totalSteps,mean(solvedScenarios,1),'x-')
+plot(nnSample,mean(nnSuccess,2),'cx-')
+plot(totalSteps,mean(refSuccess)*ones(1,length(totalSteps)),'g')
+plot(totalSteps,mean(dpwSuccess)*ones(1,length(totalSteps)),'m')
 
 
 figure(3)
@@ -251,6 +236,9 @@ plot(totalStepsVec,sumReward/nSimSteps,'x')
 errorbar(totalSteps,meanReward/nSimSteps,std(squeeze(sortedData(:,12,:)),'omitnan')/nSimSteps,'b')
 plot(totalSteps,meanReward/nSimSteps,'b')
 
+plot(totalSteps,squeeze(sortedData(:,2,:))/nSimSteps,'ro')
+plot(totalSteps,sum(squeeze(sortedData(:,2,:)),1)./stepCount/nSimSteps,'r')
+
 % if exist([logName(1:end-16),'prior_policy_result.txt'],'file')% && size(totalSteps(2:end),2) == size(nnReward,1)
 %     plot(nnSample-2000, nnReward/nSimSteps,'co')
 %     plot(nnSample-2000,mean(nnReward,2)/nSimSteps,'c')
@@ -262,7 +250,7 @@ title('Reward per step (excluding last step)')
 
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 figure(4)
 clf(4)
 hold on
@@ -280,7 +268,7 @@ for j=1:size(sortedData,3)
     meanTimeVec(j) = sumTime/sum(sortedData(:,11,j));
 end
 
-plot(totalSteps,meanTimeVec,'b-')
+plot(totalSteps,meanTimeVec,'b')
 plot(totalSteps,squeeze(mean(sortedData(:,10,:),'omitnan')),'b--')
 
 for i=1:length(idleSuccess)
@@ -317,10 +305,25 @@ dpwOnlySuccess = tmp(tmp~=0);
 plot(totalStepsVec,ones(1,length(step))*mean(dpwOnlySuccess),'m')
 plot(totalStepsVec,ones(1,length(step))*mean(dpwCorrectedTime),'m--')
 
-% if exist([logName(1:end-16),'prior_policy_result.txt'],'file')% && size(totalSteps(2:end),2) == size(nnDistance,1)
-%     plot(nnSample-2000,nnDistance/nSimSteps/dt,'co')
-%     plot(nnSample-2000,mean(nnDistance,2)/nSimSteps/dt,'c')
-% end
+if exist([logName(1:end-16),'prior_policy_result.txt'],'file')% && size(totalSteps(2:end),2) == size(nnDistance,1)
+%     plot(nnSample-2000,nnCorrectedTime,'ko')
+%     plot(nnSample-2000,mean(nnCorrectedTime,2),'k--')
+    
+    for j=1:length(nnSample)
+        sumNnTime = 0;
+        for i=1:nWorkers    
+            if nnSuccess(j,i) == 1
+                plot(nnSample(j)-2000,nnCorrectedTime(j,i),'co')
+                sumNnTime = sumNnTime + nnCorrectedTime(j,i);
+            else
+                plot(nnSample(j)-2000,nnCorrectedTime(j,i),'cx')
+            end
+        end
+        meanNnTimeVec(j) = sumNnTime/sum(nnSuccess(j,:));
+    end
+    plot(nnSample-2000,meanNnTimeVec,'c')
+    plot(nnSample-2000,mean(nnCorrectedTime,2),'c--')
+end
 
 xlabel('Training steps')
 ylabel('Time')
@@ -331,7 +334,7 @@ title('Time to exit')
 
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 figure(5)
 clf(5)
 hold on
@@ -402,9 +405,12 @@ errorbar(totalSteps,mean(normOnlySuccess,2,'omitnan'),std(normOnlySuccess','omit
 
 xlabel('Training steps')
 ylabel('Normalized mean speed')
-title('Time to exit normalized with IDM/MOBIL performance')
+title('Time to exit normalized with reference model performance')
 axis([0 max(totalStepsVec)+5000 0.8 1.25])
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Norm with dpw performance
 figure(15)
 clf(15)
@@ -478,9 +484,24 @@ ylabel('Normalized mean speed')
 title('Time to exit normalized with DPW performance')
 axis([0 max(totalStepsVec+5000) 0.8 1.25])
 
-if exist([logName(1:end-16),'prior_policy_result.txt'],'file') %&& size(totalSteps(2:end),2) == size(normWrtDpwNn,1)
-    plot(nnSample-2000,normWrtDpwNn,'co')
-    plot(nnSample-2000,mean(normWrtDpwNn,2),'c')
+if exist([logName(1:end-16),'prior_policy_result.txt'],'file')% && size(totalSteps(2:end),2) == size(nnDistance,1)
+%     plot(nnSample-2000,normWrtDpwNn,'ko')
+%     plot(nnSample-2000,mean(normWrtDpwNn,2),'k--')
+    
+    for j=1:length(nnSample)
+        sumNormNnTime = 0;
+        for i=1:nWorkers    
+            if nnSuccess(j,i) == 1
+                plot(nnSample(j)-2000,normWrtDpwNn(j,i),'co')
+                sumNormNnTime = sumNormNnTime + normWrtDpwNn(j,i);
+            else
+                plot(nnSample(j)-2000,normWrtDpwNn(j,i),'cx')
+            end
+        end
+        meanNormNnTimeVec(j) = sumNormNnTime/sum(nnSuccess(j,:));
+    end
+    plot(nnSample-2000,meanNormNnTimeVec,'c')
+    plot(nnSample-2000,mean(normWrtDpwNn,2),'c--')
 end
 
 

@@ -24,16 +24,16 @@ end #ACCParam
 function ACCParam(v0::Float64;
 				  a::Float64=1.4,
 				  b::Float64=2.0,
-				  T::Float64=1.5,
+				  T::Float64=2.5,
 				  s0::Float64=0.0,
 				  del::Float64=4.0,
-				  min_v::Float64=19.44,
-				  max_v::Float64=30.56,
-				  step_v::Float64=1.0,
+				  min_v::Float64=15.,
+				  max_v::Float64=25.,
+				  step_v::Float64=2.0,
 				  min_T::Float64=0.5,
-				  max_T::Float64=5.0,
-				  step_T::Float64=0.5, #ZZZ, possibly change this to 0.0
-				  standard_T::Float64=1.5)
+				  max_T::Float64=2.5,
+				  step_T::Float64=1.0,
+				  standard_T::Float64=2.5)
 
 	assert(max_v > min_v)
 	assert(max_T > min_T)

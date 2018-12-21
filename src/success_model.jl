@@ -79,8 +79,8 @@ function reward(mdp::Union{ MLMDP{MLState, MLAction, D, SpeedReward}, MLPOMDP{ML
     v_set = sp.cars[1].behavior.p_idm.v0
     # r = 1/(1 + ((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)^2)
     speed_penalty = abs((v_ego-mdp.rmodel.v_des)/mdp.rmodel.v_des)
-    set_speed_penalty = abs((v_set-mdp.rmodel.v_des)/mdp.rmodel.v_des)
-    r = 1 - speed_penalty - set_speed_penalty
+    # set_speed_penalty = abs((v_set-mdp.rmodel.v_des)/mdp.rmodel.v_des)
+    r = 1 - speed_penalty #- set_speed_penalty
 
     # if !isinteger(sp.cars[1].y) #This punishes being between lanes. But no negative reward is given for the final step, stepping into a new lane (or returning to the original lane)
     #     r -= mdp.rmodel.lane_change_cost

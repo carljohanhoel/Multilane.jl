@@ -139,21 +139,28 @@ function actions(mdp::NoCrashProblem, s::Union{MLState, MLPhysicalState})
             neighborhood = get_neighborhood(mdp.dmodel.phys_param, s, 1)   #Car 1 (ego)
             dv, ds = get_dv_ds(mdp.dmodel.phys_param,s,neighborhood,1,2)   #Car 1 (ego), neighborhood position 2
             ego_params = s.cars[1].behavior.p_idm
-            if ds > ego_params.max_T*s.cars[1].vel   #Front vehicle far away -> control speed
-                if a.acc == -1 && ego_params.v0 - ego_params.step_v < ego_params.min_v
-                    continue
-                end
-                if a.acc == 1 && ego_params.v0 + ego_params.step_v > ego_params.max_v
-                    continue
-                end
-            else   #Front vehicle close -> control gap time
-                if a.acc == 1 && ego_params.T - ego_params.step_T < ego_params.min_T
-                    continue
-                end
-                if a.acc == -1 && ego_params.T + ego_params.step_T > ego_params.max_T
-                    continue
-                end
+            if a.acc == 1 && ego_params.T == ego_params.min_T
+                continue
             end
+            if a.acc == -1 && ego_params.v0 == ego_params.min_v
+                continue
+            end
+            # #Old conditions below
+            # if ds > ego_params.max_T*s.cars[1].vel   #Front vehicle far away -> control speed
+            #     if a.acc == -1 && ego_params.v0 - ego_params.step_v < ego_params.min_v
+            #         continue
+            #     end
+            #     if a.acc == 1 && ego_params.v0 + ego_params.step_v > ego_params.max_v
+            #         continue
+            #     end
+            # else   #Front vehicle close -> control gap time
+            #     if a.acc == 1 && ego_params.T - ego_params.step_T < ego_params.min_T
+            #         continue
+            #     end
+            #     if a.acc == -1 && ego_params.T + ego_params.step_T > ego_params.max_T
+            #         continue
+            #     end
+            # end
             # prevent running into the person in front or to the side
             if is_safe(mdp, s, as.actions[i]) || a.lane_change == 0.0 #Now only checks if safe when changing lanes
                 push!(acceptable, i)
@@ -411,16 +418,37 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
             dv, ds = get_dv_ds(mdp.dmodel.phys_param,s,neighborhood,1,2)   #Car 1 (ego), neighborhood position 2
             ego_car = s.cars[1]
             ego_params = ego_car.behavior.p_idm
-            if ds > ego_params.max_T*ego_car.vel   #Front vehicle far away -> control speed
+            if ego_params.v0 < ego_params.max_v || (ego_params.T==ego_params.max_T && a.acc<0.)
                 new_v = ego_params.v0 + a.acc * ego_params.step_v
                 new_params = ACCParam(new_v,T=ego_params.standard_T)   #Sets new speed and resets time gap
                 new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
-            else   #Front vehicle close -> control gap time
+            else
                 new_T = ego_params.T - a.acc * ego_params.step_T
                 new_params = ACCParam(mdp.rmodel.v_des,T=new_T)  #Resets speed and sets new time gap
                 new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
-
             end
+
+            #Reset ACC when making a lane change
+            if abs(a.lane_change) > 0.
+                new_T_raw = abs(ds/ego_car.vel)
+                new_T = floor(new_T_raw+0.5)-0.5
+                new_T = max(new_T,ego_params.min_T)
+                new_T = min(new_T, ego_params.max_T)
+                new_params = ACCParam(mdp.rmodel.v_des,T=new_T)
+                new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
+            end
+
+
+            # # Old conditions, before switching action space
+            # if ds > ego_params.max_T*ego_car.vel   #Front vehicle far away -> control speed
+            #     new_v = ego_params.v0 + a.acc * ego_params.step_v
+            #     new_params = ACCParam(new_v,T=ego_params.standard_T)   #Sets new speed and resets time gap
+            #     new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
+            # else   #Front vehicle close -> control gap time
+            #     new_T = ego_params.T - a.acc * ego_params.step_T
+            #     new_params = ACCParam(mdp.rmodel.v_des,T=new_T)  #Resets speed and sets new time gap
+            #     new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
+            # end
 
             # Update according to IDM
             acc = gen_accel(new_ego_behavior, mdp.dmodel, s, neighborhood, 1)   #No rng, so no noise is added here

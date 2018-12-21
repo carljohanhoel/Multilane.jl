@@ -17,8 +17,8 @@ using AutomotiveDrivingModels
 using ImageView
 using Images
 
-# @show scenario = "continuous_driving"
-@show scenario = "exit_lane"
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
 
 # simple_run = true
 simple_run = false
@@ -70,11 +70,11 @@ s = initial_state(mdp::NoCrashMDP, rng_evaluator, initSteps=initSteps) #Creates 
 is = set_ego_behavior(s, ego_acc)
 write_to_png(visualize(mdp,s,0.0),"Figs/initState.png")
 
+##
 sim = HistoryRecorder(rng=rng_history, max_steps=episode_length, show_progress=true) # initialize a random number generator
 hist = simulate(sim, mdp, policy, s)   #Run simulation, here with standard IDM&MOBIL model as policy
 
 println("sim done")
-
 
 frames = Frames(MIME("image/png"), fps=3/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
@@ -83,3 +83,15 @@ end
 gifname = "./Figs/testViz.ogv"
 write(gifname, frames)
 println("video done")
+
+
+# ##
+# #Figure for paper:
+# #use i=3
+# #Continuous driving
+# t = 0.0
+# #Exit lane
+# # t = 37.5
+# step = Int(t/pp.dt+1)
+# state_t = hist.state_hist[step]
+# write_to_png(visualize(mdp,state_t,0.0,high_quality=true,zoom=10000),"Figs/state_at_"*string(t)*".png")

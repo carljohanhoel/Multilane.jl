@@ -117,9 +117,9 @@ class NeuralNetwork:
         joint_net = BatchNormalization()(joint_net)
         joint_net = Activation(activation='relu')(joint_net)
 
-        # joint_net = Dense(64, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(joint_net)
-        # joint_net = BatchNormalization()(joint_net)
-        # joint_net = Activation(activation='relu')(joint_net)
+        joint_net = Dense(64, use_bias=False, kernel_regularizer=regularizers.l2(self.c))(joint_net)
+        joint_net = BatchNormalization()(joint_net)
+        joint_net = Activation(activation='relu')(joint_net)
 
         dist = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(self.c))(joint_net)
         dist = Dense(N_outputs, activation='softmax', name='probabilities', kernel_regularizer=regularizers.l2(self.c))(dist)

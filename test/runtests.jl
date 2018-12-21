@@ -100,7 +100,7 @@ test_actions()
 # include("change_into.jl") # broken in 0.6 :(
 
 println("Running a NoCrashMDP example...")
-include("run_nocrash.jl")
+include("../scratch_cj/run_nocrash_cj.jl")
 # write_tmp_gif(mdp, sim)
 # println("Running a NoCrashMDP example with the robust solver...")
 # include("run_with_robust_solver.jl")

@@ -4,8 +4,8 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-@show scenario = "continuous_driving"
-# @show scenario = "exit_lane"
+# @show scenario = "continuous_driving"
+@show scenario = "exit_lane"
 
 parallel_version = false
 simple_run = false
@@ -19,7 +19,7 @@ logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 # network_to_load = "181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
 network_to_load = "181215_123610_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Bigger_net"
 
-# network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
+network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
 # network_to_load = "181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
 
 

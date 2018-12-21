@@ -145,151 +145,158 @@ srand(policy, rng_seed+5)
 
 ## Run simulations
 # N = 20
-for i in 21:100
-# i=3
-    # Reset rng:s
-    rng_evaluator_copy=MersenneTwister(Int(rng_evaluator.seed[1])+100*(i-1))
-    rng_history_copy=MersenneTwister(Int(rng_history.seed[1])+100*(i-1))
+# for i in 1:20
+i=3
 
-    s_initial = initial_state(sim_problem, rng_evaluator_copy)
-    s_initial = set_ego_behavior(s_initial, ego_acc)
-    o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
+# Reset rng:s
+rng_evaluator_copy=MersenneTwister(Int(rng_evaluator.seed[1])+100*(i-1))
+rng_history_copy=MersenneTwister(Int(rng_history.seed[1])+100*(i-1))
 
-    write_to_png(visualize(sim_problem,s_initial,0),"./Figs/ref_model_state_at_t0_i"*string(i)*".png")
+s_initial = initial_state(sim_problem, rng_evaluator_copy)
+s_initial = set_ego_behavior(s_initial, ego_acc)
+o_initial = MLObs(s_initial, problem.dmodel.phys_param.sensor_range, problem.dmodel.phys_param.obs_behaviors)
 
-    metadata = Dict(:rng_seed=>rng_seed, #Not used now
-                    :lambda=>lambda,
-                    :solver=>solver,
-                    :dt=>pp.dt,
-                    :cor=>cor
-               )
-    hr = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
-    hr_ref = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
-    hr_idle = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
+write_to_png(visualize(sim_problem,s_initial,0),"./Figs/ref_model_state_at_t0_i"*string(i)*".png")
+
+metadata = Dict(:rng_seed=>rng_seed, #Not used now
+                :lambda=>lambda,
+                :solver=>solver,
+                :dt=>pp.dt,
+                :cor=>cor
+           )
+hr = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
+hr_ref = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
+hr_idle = HistoryRecorder(max_steps=episode_length, rng=deepcopy(rng_history_copy), capture_exception=false, show_progress=true)
 
 
 
-    ##
+##
 
-    if sim_problem isa POMDP
-        if solver isa MLMPCSolver
-            updater = make_updater(cor, sim_problem, rng_seed+2+100*(i-1))
-            planner = deepcopy(policy)
-            srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
-            hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
-            hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
-            hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
-        else
-            updater = LimitedRangeUpdater()
-            planner = deepcopy(policy)
-            srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
-            hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
-            hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
-            hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
-        end
-    else
+if sim_problem isa POMDP
+    if solver isa MLMPCSolver
+        updater = make_updater(cor, sim_problem, rng_seed+2+100*(i-1))
         planner = deepcopy(policy)
         srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
-        hist = simulate(hr, sim_problem, planner, s_initial)
-        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
-        hist_idle = simulate(hr_idle, sim_problem, idle_policy, s_initial)
+        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
+        hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
+    else
+        updater = LimitedRangeUpdater()
+        planner = deepcopy(policy)
+        srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
+        hist = simulate(hr, sim_problem, planner, updater, o_initial, s_initial)
+        hist_ref = simulate(hr_ref, sim_problem, rollout_policy, updater, o_initial, s_initial)
+        hist_idle = simulate(hr_idle, sim_problem, idle_policy, updater, o_initial, s_initial)
     end
-
-    @show sum(hist.reward_hist)
-    @show sum(hist_ref.reward_hist)
-    @show sum(hist_idle.reward_hist)
-    @show hist.state_hist[end].x
-    @show hist_ref.state_hist[end].x
-    @show hist_idle.state_hist[end].x
-    if scenario == "exit_lane"
-        @show hist.state_hist[end].t
-        println(hist.state_hist[end].cars[1].y == 1.0)
-        @show hist_ref.state_hist[end].t
-        println(hist_ref.state_hist[end].cars[1].y == 1.0)
-        @show hist_idle.state_hist[end].t
-        println(hist_idle.state_hist[end].cars[1].y == 1.0)
-    end
-
-    #Action distribution
-    action_dist_dpw = zeros(Int64,5)
-    as = NoCrashSemanticActionSpace(sim_problem).actions
-    for action in hist.action_hist
-        action_dist_dpw[find(as .== action)[1]] += 1
-    end
-
-    action_dist_ref = zeros(Int64,5)
-    for action in hist_ref.action_hist
-        if action.lane_change == 0.
-            action_dist_ref[1] += 1
-        elseif action.lane_change == -1.
-            action_dist_ref[4] += 1
-        elseif action.lane_change == +1.
-            action_dist_ref[5] += 1
-        end
-    end
-
-
-    if scenario == "continuous_driving"
-        logname = "dpwAndRefAndIdleModelsDistance"
-    elseif scenario == "exit_lane"
-        logname = "exit_dpwAndRefAndIdleModelsDistance"
-    end
-    open("./Logs/dpwAndRefAndIdleModelsDistance_"*scenario*"_"*start_time*".txt","a") do f
-        # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
-        if scenario == "continuous_driving"
-            writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x, action_dist_dpw[1], action_dist_dpw[2], action_dist_dpw[3], action_dist_dpw[4], action_dist_dpw[5], action_dist_ref[1], action_dist_ref[4], action_dist_ref[5] ]], " ")
-        elseif scenario == "exit_lane"
-            writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x,
-                             hist.state_hist[end].t, hist_ref.state_hist[end].t, hist_idle.state_hist[end].t, hist.state_hist[end].t-(hist.state_hist[end].x-dmodel.max_dist)/hist.state_hist[end].cars[1].vel, hist_ref.state_hist[end].t-(hist_ref.state_hist[end].x-dmodel.max_dist)/hist_ref.state_hist[end].cars[1].vel, hist_idle.state_hist[end].t-(hist_idle.state_hist[end].x-dmodel.max_dist)/hist_idle.state_hist[end].cars[1].vel,
-                             hist.state_hist[end].cars[1].y, hist_ref.state_hist[end].cars[1].y, hist_idle.state_hist[end].cars[1].y, hist.state_hist[end].cars[1].y==1.0 *1, hist_ref.state_hist[end].cars[1].y==1.0 *1, hist_idle.state_hist[end].cars[1].y==1.0 *1 , action_dist_dpw[2], action_dist_dpw[3], action_dist_dpw[4], action_dist_dpw[5], action_dist_ref[1], action_dist_ref[4], action_dist_ref[5] ]], " ")
-        end
-    end
-
-    # open("./Logs/refModelResults2_.txt","a") do f
-    #     writedlm(f, [[sum(hist_ref.reward_hist)]], " ")
-    #     writedlm(f, [[hist_ref.state_hist[end].x]], " ")
-    # end
-
-    # end
-    #
-    # #Visualization
-    # #Set time t used for showing tree. Use video to find interesting situations.
-    # t = 4.5
-    # step = convert(Int, t / pp.dt) + 1
-    # write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
-    # print(hist.action_hist[step])
-    # inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-    # # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
-
-    #
-    #Produce video
-    frames = Frames(MIME("image/png"), fps=3/pp.dt)
-    @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
-        push!(frames, visualize(problem, s, r))
-    end
-    gifname = "./Figs/"*scenario*"_dpw_i"*string(i)*"_"*start_time*".ogv"
-    write(gifname, frames)
-
-
-    #Reference model
-    frames = Frames(MIME("image/png"), fps=3/pp.dt)
-    @showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
-        push!(frames, visualize(problem, s, r))
-    end
-    gifname = "./Figs/"*scenario*"_refModel_i"*string(i)*"_"*start_time*".ogv"
-    write(gifname, frames)
-    #
-    #Idle model
-    frames = Frames(MIME("image/png"), fps=3/pp.dt)
-    @showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
-        push!(frames, visualize(problem, s, r))
-    end
-    gifname = "./Figs/"*scenario*"_idleModel_i"*string(i)*"_"*start_time*".ogv"
-    write(gifname, frames)
-
-
-
+else
+    planner = deepcopy(policy)
+    srand(planner, Int(policy.rng.seed[1])+100*(i-1))   #Sets rng seed of planner
+    hist = simulate(hr, sim_problem, planner, s_initial)
+    hist_ref = simulate(hr_ref, sim_problem, rollout_policy, s_initial)
+    hist_idle = simulate(hr_idle, sim_problem, idle_policy, s_initial)
 end
+
+@show sum(hist.reward_hist)
+@show sum(hist_ref.reward_hist)
+@show sum(hist_idle.reward_hist)
+@show hist.state_hist[end].x
+@show hist_ref.state_hist[end].x
+@show hist_idle.state_hist[end].x
+if scenario == "exit_lane"
+    @show hist.state_hist[end].t
+    println(hist.state_hist[end].cars[1].y == 1.0)
+    @show hist_ref.state_hist[end].t
+    println(hist_ref.state_hist[end].cars[1].y == 1.0)
+    @show hist_idle.state_hist[end].t
+    println(hist_idle.state_hist[end].cars[1].y == 1.0)
+end
+
+#Action distribution
+action_dist_dpw = zeros(Int64,5)
+as = NoCrashSemanticActionSpace(sim_problem).actions
+for action in hist.action_hist
+    action_dist_dpw[find(as .== action)[1]] += 1
+end
+
+action_dist_ref = zeros(Int64,5)
+for action in hist_ref.action_hist
+    if action.lane_change == 0.
+        action_dist_ref[1] += 1
+    elseif action.lane_change == -1.
+        action_dist_ref[4] += 1
+    elseif action.lane_change == +1.
+        action_dist_ref[5] += 1
+    end
+end
+
+
+if scenario == "continuous_driving"
+    logname = "dpwAndRefAndIdleModelsDistance"
+elseif scenario == "exit_lane"
+    logname = "exit_dpwAndRefAndIdleModelsDistance"
+end
+open("./Logs/dpwAndRefAndIdleModelsDistance_"*scenario*"_"*start_time*".txt","a") do f
+    # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+    if scenario == "continuous_driving"
+        writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x, action_dist_dpw[1], action_dist_dpw[2], action_dist_dpw[3], action_dist_dpw[4], action_dist_dpw[5], action_dist_ref[1], action_dist_ref[4], action_dist_ref[5] ]], " ")
+    elseif scenario == "exit_lane"
+        writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x,
+                         hist.state_hist[end].t, hist_ref.state_hist[end].t, hist_idle.state_hist[end].t, hist.state_hist[end].t-(hist.state_hist[end].x-dmodel.max_dist)/hist.state_hist[end].cars[1].vel, hist_ref.state_hist[end].t-(hist_ref.state_hist[end].x-dmodel.max_dist)/hist_ref.state_hist[end].cars[1].vel, hist_idle.state_hist[end].t-(hist_idle.state_hist[end].x-dmodel.max_dist)/hist_idle.state_hist[end].cars[1].vel,
+                         hist.state_hist[end].cars[1].y, hist_ref.state_hist[end].cars[1].y, hist_idle.state_hist[end].cars[1].y, hist.state_hist[end].cars[1].y==1.0 *1, hist_ref.state_hist[end].cars[1].y==1.0 *1, hist_idle.state_hist[end].cars[1].y==1.0 *1 , action_dist_dpw[2], action_dist_dpw[3], action_dist_dpw[4], action_dist_dpw[5], action_dist_ref[1], action_dist_ref[4], action_dist_ref[5] ]], " ")
+    end
+end
+
+# open("./Logs/refModelResults2_.txt","a") do f
+#     writedlm(f, [[sum(hist_ref.reward_hist)]], " ")
+#     writedlm(f, [[hist_ref.state_hist[end].x]], " ")
+# end
+
+# end
+#
+# #Visualization
+# #Set time t used for showing tree. Use video to find interesting situations.
+# t = 4.5
+# step = convert(Int, t / pp.dt) + 1
+# write_to_png(visualize(sim_problem,hist.state_hist[step],hist.reward_hist[step]),"./Figs/state_at_t.png")
+# print(hist.action_hist[step])
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
+# # inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+
+#
+#Produce video
+frames = Frames(MIME("image/png"), fps=3/pp.dt)
+@showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
+    push!(frames, visualize(problem, s, r))
+end
+gifname = "./Figs/"*scenario*"_dpw_i"*string(i)*"_"*start_time*".ogv"
+write(gifname, frames)
+
+
+#Reference model
+frames = Frames(MIME("image/png"), fps=3/pp.dt)
+@showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
+    push!(frames, visualize(problem, s, r))
+end
+gifname = "./Figs/"*scenario*"_refModel_i"*string(i)*"_"*start_time*".ogv"
+write(gifname, frames)
+#
+#Idle model
+frames = Frames(MIME("image/png"), fps=3/pp.dt)
+@showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
+    push!(frames, visualize(problem, s, r))
+end
+gifname = "./Figs/"*scenario*"_idleModel_i"*string(i)*"_"*start_time*".ogv"
+write(gifname, frames)
+
+
+
+# end
+
+
+
+
+
+
 
 # For visualizing rollouts, not used for now. See make_video for more details
 # tree = get(hist.ainfo_hist[1], :tree, nothing)

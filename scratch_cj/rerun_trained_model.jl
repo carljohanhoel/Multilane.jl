@@ -17,14 +17,15 @@ tree_in_info = false
 # tree_in_info = true
 
 # sample_to_load = "15011"
-sample_to_load = "14200"
+sample_to_load = "8024"
 
 # network_to_load = "181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 # network_to_load = "181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim"
 # network_to_load = "181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
 
 # network_to_load = "181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim"
-network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
+# network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
+network_to_load = "181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
 
 
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
@@ -41,7 +42,7 @@ process = []   #Needs to be defines so can us include visualize_value_action
 #Possibly add loop here, loop over process
 # for process in 23:102
 # for process in 72:102
-process = 15
+process = 5
 i=process-2
 
 @show i

@@ -23,13 +23,21 @@ using Images
 using D3Trees
 ##
 
-@show scenario = "continuous_driving"
-# @show scenario = "exit_lane"
+# @show scenario = "continuous_driving"
+@show scenario = "exit_lane"
 
 #Code for loading saved evaluation history, visualizing MCTS tree and producing video
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
-# log_dir = "181016_152419_driving_Change_pen_0p01_Loss_weights_1_100_Cpuct_0p1_Remove_10_samples_Only_z_target"
-log_dir = logs_path*"181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
+# log_dir = logs_path*"181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
+# log_dir = logs_path*"181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim"
+# log_dir = logs_path*"181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
+# log_dir = logs_path*"181215_123610_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Bigger_net"
+
+# log_dir = logs_path*"181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim"
+# log_dir = logs_path*"181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
+log_dir = logs_path*"181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
+
+
 eval_files = []
 all_files = readdir(log_dir)
 for file_name in all_files
@@ -85,7 +93,7 @@ elseif problem_type == "pomdp"
     end
 end
 
-
+##
 # #Visualization
 # #Set time t used for showing tree. Use video to find interesting situations.
 # t = 3.0

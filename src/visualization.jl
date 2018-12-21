@@ -34,7 +34,7 @@ function interp_state(s, sp, frac)
     return MLState(x, t, cars, s.terminal)
 end
 
-function visualize(p, s, r; tree=nothing)
+function visualize(p, s, r; tree=nothing, high_quality=false, zoom=50000)
     pp = p.dmodel.phys_param
     stuff = []
     # roadway = gen_straight_roadway(pp.nb_lanes, p.dmodel.max_dist+200.0, lane_width=pp.w_lane)
@@ -66,7 +66,12 @@ function visualize(p, s, r; tree=nothing)
         push!(stuff, ac)
     end
 
-    render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
+    if high_quality
+        # render(stuff, cam=CarFollowCamera(1, 10000/pp.lane_length),canvas_width=10000, canvas_height=5000) #Use this for high resolution images (video doesn't work very well with this for some reason...)
+        render(stuff, cam=CarFollowCamera(1, zoom/pp.lane_length),canvas_width=10000, canvas_height=5000)
+    else
+        render(stuff, cam=CarFollowCamera(1, 8.5*100/pp.lane_length))
+    end
 end
 
 function visualize_with_nn(p, s, a, r, values, p0_vec, p0_vec_all_actions, p_nn, p_tree; tree=nothing)

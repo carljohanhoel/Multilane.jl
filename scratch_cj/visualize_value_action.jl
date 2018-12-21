@@ -3,7 +3,7 @@
 
 #Visualization
 #Set time t used for showing tree. Use video to find interesting situations.
-t = 43.5
+t = 0.0
 step = convert(Int, t / pp.dt) + 1
 
 state_t = deepcopy(hist.state_hist[step])
@@ -20,14 +20,13 @@ end
 p_nn = MCTS.init_P(planner.solver.init_P, planner.mdp, state_t, allowed_actions_vec)
 v_nn = estimate_value(planner.solved_estimate, planner.mdp, state_t, planner.solver.depth)[1]
 p_tree = hist.ainfo_hist[step][:action_distribution]
-@show p_tree
-@show p_nn
-@show v_nn
+# @show p_tree
+# @show p_nn
+# @show v_nn
 
 
-print(hist.action_hist[step])
-inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
-# inchromium(D3Tree(hist.ainfo_hist[step][:tree],hist.state_hist[step],init_expand=1))   #For MCTS (not DPW)
+# print(hist.action_hist[step])
+# inchromium(D3Tree(hist.ainfo_hist[step][:tree],init_expand=1))
 
 
 
@@ -96,5 +95,6 @@ step = 0
 
     push!(frames, visualize_with_nn(sim_problem,s,a,r,v0,p0_vec, p0_vec_all_actions, p_nn, p_tree))
 end
-gifname = "./Figs/options_video_"*network_to_load*sample_to_load*".ogv"
+# gifname = logs_path*network_to_load*"/Reruns/"*"sample_"*sample_to_load*"_process_"*string(process)*"_options_"*network_to_load*".ogv"
+gifname = gifname[1:end-4]*"_options.ogv"
 write(gifname, frames)   #The bad quality probably has something to do with the creation of the video. The frames themselves look good. Also, with a smaller fps, it looks good.

@@ -143,7 +143,8 @@ export #data structure stuff
     relaxed_initial_state,
     set_ego_behavior,
     nan,
-    state
+    state,
+    initial_double_overtaking_state
 
 export # POMDP belief stuff
     ParticleUpdater,

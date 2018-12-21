@@ -417,7 +417,7 @@ function generate_s(mdp::NoCrashProblem, s::MLState, a::MLAction, rng::AbstractR
                 new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
             else   #Front vehicle close -> control gap time
                 new_T = ego_params.T - a.acc * ego_params.step_T
-                new_params = ACCParam(25.0,T=new_T)   #ZZZ parameterize 25, get from planner!!!   #Resets speed and sets new time gap
+                new_params = ACCParam(mdp.rmodel.v_des,T=new_T)  #Resets speed and sets new time gap
                 new_ego_behavior = ACCBehavior(new_params, ego_car.behavior.idx)
 
             end
@@ -870,6 +870,26 @@ function set_ego_behavior(s::MLState, ego_behavior::BehaviorModel=NORMAL)
     end
     s = MLState(s.x, s.t, cars)
 end
+
+function initial_double_overtaking_state(p::NoCrashProblem)
+    mdp = NoCrashMDP{typeof(p.rmodel), typeof(p.dmodel.behaviors)}(p.dmodel, p.rmodel, p.discount, p.throw) # make sure an MDP
+    pp = mdp.dmodel.phys_param
+    is = MLState(0.0, 0.0, CarState[CarState(pp.lane_length/2, 1, 20., 0.0, NORMAL, pp.l_truck, pp.w_truck, 1)])
+    car_behavior = IDMMOBILBehavior(IDMParam(1.0, 1.0, 1.8, p.dmodel.phys_param.v_min, 4.0, 4.0), MOBILParam(0., 1., 10000000000.), 1) #No lane changes, keep minimum speed (70 kph)
+    push!(is.cars, CarState(pp.lane_length/2+45., 1, pp.v_min, 0.0, car_behavior, pp.l_car, pp.w_car, 1))
+    push!(is.cars, CarState(pp.lane_length/2+40., 2, pp.v_min, 0.0, car_behavior, pp.l_car, pp.w_car, 1))
+    # push!(is.cars, CarState(pp.lane_length/2+26., 3, pp.v_min, 0.0, car_behavior, pp.l_car, pp.w_car, 1))
+    # push!(is.cars, CarState(pp.lane_length/2+26., 1, pp.v_min, 0.0, car_behavior, pp.l_car, pp.w_car, 1))
+    # push!(is.cars, CarState(pp.lane_length/2+20., 2, pp.v_min, 0.0, car_behavior, pp.l_car, pp.w_car, 1))
+
+    # is = relaxed_initial_state(mdp, initSteps, rng)
+
+    ego_acc = ACCBehavior(ACCParam(p.dmodel.phys_param.v_nominal), 1)
+    # ego_acc = ACCBehavior(ACCParam(p.dmodel.phys_param.v_nominal,T=0.5), 1)
+    is = set_ego_behavior(is, ego_acc)
+    return is
+end
+
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)
     return MLObs(sp, mdp.dmodel.phys_param.sensor_range, mdp.dmodel.phys_param.obs_behaviors)

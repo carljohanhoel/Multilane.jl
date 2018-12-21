@@ -144,8 +144,8 @@ srand(policy, rng_seed+5)
 
 
 ## Run simulations
-N = 20
-for i in 1:N
+# N = 20
+for i in 21:100
 # i=3
     # Reset rng:s
     rng_evaluator_copy=MersenneTwister(Int(rng_evaluator.seed[1])+100*(i-1))
@@ -210,6 +210,24 @@ for i in 1:N
         println(hist_idle.state_hist[end].cars[1].y == 1.0)
     end
 
+    #Action distribution
+    action_dist_dpw = zeros(Int64,5)
+    as = NoCrashSemanticActionSpace(sim_problem).actions
+    for action in hist.action_hist
+        action_dist_dpw[find(as .== action)[1]] += 1
+    end
+
+    action_dist_ref = zeros(Int64,5)
+    for action in hist_ref.action_hist
+        if action.lane_change == 0.
+            action_dist_ref[1] += 1
+        elseif action.lane_change == -1.
+            action_dist_ref[4] += 1
+        elseif action.lane_change == +1.
+            action_dist_ref[5] += 1
+        end
+    end
+
 
     if scenario == "continuous_driving"
         logname = "dpwAndRefAndIdleModelsDistance"
@@ -219,11 +237,11 @@ for i in 1:N
     open("./Logs/dpwAndRefAndIdleModelsDistance_"*scenario*"_"*start_time*".txt","a") do f
         # writedlm(f, [[i, sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
         if scenario == "continuous_driving"
-            writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x]], " ")
+            writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x, action_dist_dpw[1], action_dist_dpw[2], action_dist_dpw[3], action_dist_dpw[4], action_dist_dpw[5], action_dist_ref[1], action_dist_ref[4], action_dist_ref[5] ]], " ")
         elseif scenario == "exit_lane"
             writedlm(f, [[i, sum(hist.reward_hist), sum(hist_ref.reward_hist), sum(hist_idle.reward_hist), hist.state_hist[end].x, hist_ref.state_hist[end].x, hist_idle.state_hist[end].x,
                              hist.state_hist[end].t, hist_ref.state_hist[end].t, hist_idle.state_hist[end].t, hist.state_hist[end].t-(hist.state_hist[end].x-dmodel.max_dist)/hist.state_hist[end].cars[1].vel, hist_ref.state_hist[end].t-(hist_ref.state_hist[end].x-dmodel.max_dist)/hist_ref.state_hist[end].cars[1].vel, hist_idle.state_hist[end].t-(hist_idle.state_hist[end].x-dmodel.max_dist)/hist_idle.state_hist[end].cars[1].vel,
-                             hist.state_hist[end].cars[1].y, hist_ref.state_hist[end].cars[1].y, hist_idle.state_hist[end].cars[1].y, hist.state_hist[end].cars[1].y==1.0 *1, hist_ref.state_hist[end].cars[1].y==1.0 *1, hist_idle.state_hist[end].cars[1].y==1.0 *1 ]], " ")
+                             hist.state_hist[end].cars[1].y, hist_ref.state_hist[end].cars[1].y, hist_idle.state_hist[end].cars[1].y, hist.state_hist[end].cars[1].y==1.0 *1, hist_ref.state_hist[end].cars[1].y==1.0 *1, hist_idle.state_hist[end].cars[1].y==1.0 *1 , action_dist_dpw[2], action_dist_dpw[3], action_dist_dpw[4], action_dist_dpw[5], action_dist_ref[1], action_dist_ref[4], action_dist_ref[5] ]], " ")
         end
     end
 

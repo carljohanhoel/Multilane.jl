@@ -20,8 +20,8 @@ using Images
 #For tree viz
 using D3Trees
 
-@show scenario = "continuous_driving"
-# @show scenario = "exit_lane"
+# @show scenario = "continuous_driving"
+@show scenario = "exit_lane"
 
 # simple_run = true
 simple_run = false
@@ -145,8 +145,8 @@ srand(policy, rng_seed+5)
 
 ## Run simulations
 # N = 20
-# for i in 1:20
-i=3
+for i in 1:20
+# i=3
 
 # Reset rng:s
 rng_evaluator_copy=MersenneTwister(Int(rng_evaluator.seed[1])+100*(i-1))
@@ -268,7 +268,7 @@ frames = Frames(MIME("image/png"), fps=3/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/"*scenario*"_dpw_i"*string(i)*"_"*start_time*".ogv"
+gifname = "./Figs/"*start_time*"_"*scenario*"_"*string(i)*"_dpw"*".ogv"
 write(gifname, frames)
 
 
@@ -277,7 +277,7 @@ frames = Frames(MIME("image/png"), fps=3/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist_ref, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/"*scenario*"_refModel_i"*string(i)*"_"*start_time*".ogv"
+gifname = "./Figs/"*start_time*"_"*scenario*"_"*string(i)*"_refModel"*".ogv"
 write(gifname, frames)
 #
 #Idle model
@@ -285,12 +285,12 @@ frames = Frames(MIME("image/png"), fps=3/pp.dt)
 @showprogress for (s, ai, r, sp) in eachstep(hist_idle, "s, ai, r, sp")
     push!(frames, visualize(problem, s, r))
 end
-gifname = "./Figs/"*scenario*"_idleModel_i"*string(i)*"_"*start_time*".ogv"
+gifname = "./Figs/"*start_time*"_"*scenario*"_"*string(i)*"_idleModel"*".ogv"
 write(gifname, frames)
 
 
 
-# end
+end
 
 
 

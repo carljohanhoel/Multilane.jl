@@ -144,7 +144,8 @@ export #data structure stuff
     set_ego_behavior,
     nan,
     state,
-    initial_double_overtaking_state
+    initial_double_overtaking_state,
+    initial_braking_exit_state
 
 export # POMDP belief stuff
     ParticleUpdater,

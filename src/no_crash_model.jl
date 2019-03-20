@@ -918,6 +918,43 @@ function initial_double_overtaking_state(p::NoCrashProblem)
     return is
 end
 
+function initial_braking_exit_state(p::NoCrashProblem)
+    v_start = 21.
+    mdp = NoCrashMDP{typeof(p.rmodel), typeof(p.dmodel.behaviors)}(p.dmodel, p.rmodel, p.discount, p.throw) # make sure an MDP
+    pp = mdp.dmodel.phys_param
+    is = MLState(720.0, 0.0, CarState[CarState(pp.lane_length/2, 4, v_start, 0.0, NORMAL, pp.l_truck, pp.w_truck, 1)])
+    # car_behavior = IDMMOBILBehavior(IDMParam(1.0, 1.0, 1.8, 25.0, 4.0, 4.0), MOBILParam(0., 1., 10000000000.), 2) #No lane changes, keep 25 m/s
+    # push!(is.cars, CarState(260., 1, 25.0, 0.0, car_behavior, pp.l_car, pp.w_car, 2))
+    # push!(is.cars, CarState(300., 2, 25.0, 0.0, car_behavior, pp.l_car, pp.w_car, 3))
+    # push!(is.cars, CarState(295., 2, 25.0, 0.0, car_behavior, pp.l_car, pp.w_car, 4))
+
+    # car_behavior_timid = IDMMOBILBehavior(IDMParam(0.8, 1.0, 2.0, 20., 4.0, 4.0), MOBILParam(0., 1., 10000000000.), 2)
+    # car_behavior_aggressive = IDMMOBILBehavior(IDMParam(2.0, 3.0, 1.0, pp.v_max, 0.0, 4.0), MOBILParam(0., 1., 10000000000.), 3)
+    # car_behavior_intermediate = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, 25.0, 2.0, 4.0), MOBILParam(0., 1., 10000000000.), 4)
+    # push!(is.cars, CarState(340., 1, 20., 0.0, car_behavior_timid, pp.l_car, pp.w_car, 2))
+    # push!(is.cars, CarState(315., 1, 20., 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 3))
+    # push!(is.cars, CarState(290., 1, 20., 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 4))
+
+    car_behavior_timid = IDMMOBILBehavior(IDMParam(0.8, 1.0, 2.0, v_start, 4.0, 4.0), MOBILParam(0., 1., 10000000000.), 2)
+    car_behavior_aggressive = IDMMOBILBehavior(IDMParam(2.0, 3.0, 0.8, pp.v_max, 0.0, 4.0), MOBILParam(0., 1., 10000000000.), 3)
+    car_behavior_intermediate = IDMMOBILBehavior(IDMParam(1.4, 2.0, 1.5, 25.0, 2.0, 4.0), MOBILParam(0., 1., 10000000000.), 4)
+    push!(is.cars, CarState(330., 1, v_start, 0.0, car_behavior_timid, pp.l_car, pp.w_car, 2))
+    push!(is.cars, CarState(310., 1, v_start, 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 3))
+    push!(is.cars, CarState(280., 2, v_start, 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 4))
+    push!(is.cars, CarState(300., 2, v_start, 0.0, car_behavior_timid, pp.l_car, pp.w_car, 5))
+    push!(is.cars, CarState(300., 3, v_start, 0.0, car_behavior_timid, pp.l_car, pp.w_car, 6))
+
+
+    # push!(is.cars, CarState(310., 2, 22., 0.0, car_behavior_timid, pp.l_car, pp.w_car, 5))
+    # push!(is.cars, CarState(275., 1, pp.v_max, 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 5))
+    # is = relaxed_initial_state(mdp, initSteps, rng)
+
+    ego_acc = ACCBehavior(ACCParam(v_start), 1)
+    # ego_acc = ACCBehavior(ACCParam(p.dmodel.phys_param.v_nominal,T=0.5), 1)
+    is = set_ego_behavior(is, ego_acc)
+    return is
+end
+
 
 function generate_o(mdp::NoCrashProblem, s::MLState, a::MLAction, sp::MLState)
     return MLObs(sp, mdp.dmodel.phys_param.sensor_range, mdp.dmodel.phys_param.obs_behaviors)

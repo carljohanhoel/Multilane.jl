@@ -22,7 +22,7 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import TensorBoard
 
 config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.1 #ZZZ Should be correlated with network size
+config.gpu_options.per_process_gpu_memory_fraction = 0.01 #ZZZ Should be correlated with network size
 set_session(tf.Session(config=config))
 
 class ReplayMemory():

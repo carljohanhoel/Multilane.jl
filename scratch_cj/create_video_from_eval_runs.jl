@@ -32,10 +32,18 @@ logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 # log_dir = logs_path*"181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim"
 # log_dir = logs_path*"181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
 # log_dir = logs_path*"181215_123610_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Bigger_net"
+log_dir = logs_path*"181221_153735_driving_Cpuct_0p1_Bigger_net_New_action_space"
 
 # log_dir = logs_path*"181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim"
 # log_dir = logs_path*"181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
-log_dir = logs_path*"181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
+# log_dir = logs_path*"181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
+log_dir = logs_path*"181221_154727_driving_exit_lane_Cpuct_0p1_Terminal_state_Est_v0_R_plus_19_Bigger_net_New_action_space"
+log_dir = logs_path*"181221_155518_driving_exit_lane_Cpuct_0p5_Terminal_state_Est_v0_R_plus_19_Bigger_net_New_action_space"
+log_dir = logs_path*"190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm"
+# log_dir = logs_path*"190128_143325_driving_exit_lane_Cpuct_0p1_Small_net_New_action_space_No_batchnorm"
+
+
+
 
 
 eval_files = []

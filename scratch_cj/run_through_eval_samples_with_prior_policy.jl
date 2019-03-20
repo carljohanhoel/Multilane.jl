@@ -4,8 +4,8 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-# @show scenario = "continuous_driving"
-@show scenario = "exit_lane"
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
 
 parallel_version = false
 simple_run = false
@@ -17,10 +17,17 @@ logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 # network_to_load = "181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 # network_to_load = "181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim"
 # network_to_load = "181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
-network_to_load = "181215_123610_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Bigger_net"
+# network_to_load = "181215_123610_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Bigger_net"
+network_to_load = "181221_153735_driving_Cpuct_0p1_Bigger_net_New_action_space"
 
-network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
+
+# network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
 # network_to_load = "181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
+network_to_load = "181221_154727_driving_exit_lane_Cpuct_0p1_Terminal_state_Est_v0_R_plus_19_Bigger_net_New_action_space"
+network_to_load = "181221_155518_driving_exit_lane_Cpuct_0p5_Terminal_state_Est_v0_R_plus_19_Bigger_net_New_action_space"
+network_to_load = "190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm"
+# network_to_load = "190128_143325_driving_exit_lane_Cpuct_0p1_Small_net_New_action_space_No_batchnorm
+network_to_load = "190218_082611_driving_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm"
 
 
 eval_samples = []

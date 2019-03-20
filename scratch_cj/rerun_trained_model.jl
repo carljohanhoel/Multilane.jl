@@ -4,8 +4,8 @@ push!(LOAD_PATH,joinpath("./src"))
 
 using Revise #To allow recompiling of modules withhout restarting julia
 
-# @show scenario = "continuous_driving"
-@show scenario = "exit_lane"
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
 
 # parallel_version = true   #Test code in parallel mode
 parallel_version = false
@@ -16,16 +16,49 @@ simple_run = false
 tree_in_info = false
 # tree_in_info = true
 
-# sample_to_load = "15011"
-sample_to_load = "8024"
 
+
+
+# Continuous case
 # network_to_load = "181119_180615_driving_Change_pen_0p03_Cpuct_0p1_Dpw_0p3_N_final_32_Lane_change_in_ego_state_V_min_10_Added_set_V_set_T_ego_state"
 # network_to_load = "181126_154437_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim"
 # network_to_load = "181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
+network_to_load = "181221_153735_driving_Cpuct_0p1_Bigger_net_New_action_space"
 
+sample_to_load = "381"
+sample_to_load = "1141"
+sample_to_load = "2091"
+sample_to_load = "3041"
+sample_to_load = "4181"
+sample_to_load = "5131"
+sample_to_load = "6081"
+sample_to_load = "7031"
+sample_to_load = "8171"
+sample_to_load = "9121"
+# sample_to_load = "10071"
+# sample_to_load = "11021"
+# sample_to_load = "12161"
+# sample_to_load = "13111"
+
+# sample_to_load = "14061"
+
+
+
+
+# Exit case
 # network_to_load = "181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim"
 # network_to_load = "181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0"
-network_to_load = "181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
+# network_to_load = "181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
+# network_to_load = "190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm"
+
+# sample_to_load = "15011"
+# sample_to_load = "1035"
+# sample_to_load = "2054"
+# sample_to_load = "3056"
+# sample_to_load = "4028"
+# sample_to_load = "5050"
+# sample_to_load = "6041"
+
 
 
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
@@ -40,9 +73,9 @@ planner = []   #Needs to be defines so can us include visualize_value_action
 process = []   #Needs to be defines so can us include visualize_value_action
 ##
 #Possibly add loop here, loop over process
-# for process in 23:102
+for process in 3:102
 # for process in 72:102
-process = 5
+# process = 5
 i=process-2
 
 @show i
@@ -116,4 +149,4 @@ open(logs_path*network_to_load*"/Reruns/"*"evalResults2_.txt","a") do f
 end
 
 
-# end
+end

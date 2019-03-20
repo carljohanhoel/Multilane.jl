@@ -66,7 +66,7 @@ logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
 
 include("simulation_setup.jl")
 
-solver.n_iterations = 1000
+solver.n_iterations = 10000
 
 
 # hr.max_steps = 10

@@ -20,8 +20,8 @@ using Images
 #For tree viz
 using D3Trees
 
-# @show scenario = "continuous_driving"
-@show scenario = "exit_lane"
+@show scenario = "continuous_driving"
+# @show scenario = "exit_lane"
 
 # simple_run = true
 simple_run = false
@@ -137,6 +137,7 @@ end
 
 sim_problem = deepcopy(problem)
 sim_problem.throw=true
+# sim_problem.throw=false
 
 policy = solve(solver,sim_problem)
 srand(policy, rng_seed+5)
@@ -145,7 +146,7 @@ srand(policy, rng_seed+5)
 
 ## Run simulations
 # N = 20
-for i in 1:20
+for i in 88:88
 # i=3
 
 # Reset rng:s

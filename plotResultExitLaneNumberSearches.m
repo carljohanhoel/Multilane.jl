@@ -2,48 +2,24 @@ clc
 clear all
 % close all
 
-%Exit lane
-% logName = './Logs/181130_160730_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim/evalResults2.txt';
-logName = './Logs/181203_174746_driving_exit_lane_Cpuct_0p1_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0/evalResults2.txt';
-logName = './Logs/181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19/evalResults2.txt';
-
-%New action space
-% logName = './Logs/181221_154727_driving_exit_lane_Cpuct_0p1_Terminal_state_Est_v0_R_plus_19_Bigger_net_New_action_space/evalResults2.txt';
-% logName = './Logs/181221_155518_driving_exit_lane_Cpuct_0p5_Terminal_state_Est_v0_R_plus_19_Bigger_net_New_action_space/evalResults2.txt';
-
-%No batch norm
-logName = './Logs/190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm/evalResults2.txt';
-% logName = './Logs/190128_143325_driving_exit_lane_Cpuct_0p1_Small_net_New_action_space_No_batchnorm/evalResults2.txt';
-
-
-% Ref model
-% rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181129_103940_exit_lane.txt');
-% rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181207_160457_.txt'); %c_puct o.5
-rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181221_161257_newActionSpace.txt');
-% rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181221_161903_newActionSpace_cpuct0p5.txt'); %c_puct o.5
-
 
 %100 eval runs
-evalRuns = false;
 evalRuns = true;
+logName = './Logs/190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm/Reruns/evalResults2_searches_15038.txt';
 rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_190316_144617_100evalRuns_forPaper.txt');
-logName = './Logs/190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm/Reruns/evalResults2_.txt';
 
-
+%%
 
 data = dlmread(logName,' ');
 
-evalFreq = 1000;
-firstEval = 1001; %401;
-exitPos = 1000;
+nSearches = [1 10 100 1000 2000 10000]; %%%%%%%%%%%%%%%% TMP, CHANGE ORDER %%%%%%%%%%%%%%%%%%%%%%%%%
 
+exitPos = 1000;
 m = 9; %Number of lines for each worker and eval run
+
 for i=1:size(data,1)/m
     worker(i) = data((i-1)*m+1,1);
     step(i) = data((i-1)*m+1,2);
-%     if step(i) == 201 %Fix because first eval happens after 201 steps and not 1 steps
-%         step(i) = 1;
-%     end
     sum_reward(i) = data((i-1)*m+1,3);
     reward(i,:) = data((i-1)*m+2,:);
     x(i,:) = data((i-1)*m+3,:);
@@ -59,11 +35,7 @@ for i=1:size(data,1)/m
     v_end = v(i,i_end);
     T = T_ - (x_end-exitPos)/v_end;
 
-    idx = (step(i)-firstEval+evalFreq)/evalFreq+1;
-    if idx < 1.5
-        idx = 1;
-    end
-    idx = round(idx);
+    idx = find(nSearches==step(i));
 
     sortedData(worker(i)-2,1,idx) = idx;            %sortedData dims: worker #, property, generation
     sortedData(worker(i)-2,2,idx) = sum_reward(i);
@@ -89,27 +61,23 @@ end
 sortedData(:,4:9,:) = tmp2;
 
 
-%Move first step index to 0
-step = step - (min(step)==step).*(min(step)-0); %Move first one to 0, since then no training has been done
-
 uniqueSteps = [];
 stepCount = [];
 % sumValue = [];
 values = [];
 totalSteps = [];
 k=0;
-stepSorted = sort(step);
-for i=1:size(stepSorted,2)
+for i=1:size(step,2)
 %     if ~ismember(step(i),uniqueSteps)
-    if length(uniqueSteps)==0 || ~( min(abs(uniqueSteps-stepSorted(i))) < 300 ) %then unique step
+    if length(uniqueSteps)==0 || ~( min(abs(uniqueSteps-step(i))) < 5 ) %then unique step
         k = k+1;
-        uniqueSteps(k) = stepSorted(i);
+        uniqueSteps(k) = step(i);
         stepCount(k) = 1;
 %         sumValue(k) = sum_reward(i);
         values(k,1) = sum_reward(i);
     else
 %         idx = find(uniqueSteps==step(i));
-        [dummy, idx] = min(abs(uniqueSteps-stepSorted(i)));
+        [dummy, idx] = min(abs(uniqueSteps-step(i)));
         stepCount(idx) = stepCount(idx)+1;
         values(idx,stepCount(idx)) = sum_reward(i);
 %         sumValue(idx) = sumValue(idx)+sum_reward(i);
@@ -124,11 +92,8 @@ meanValue = sum(squeeze(sortedData(:,2,:)),1,'omitnan')./stepCount;
 
 values(values==0)=nan; %If worker dies, replace zeros with nans
 
-totalSteps = cumsum([0,diff(sort(uniqueSteps))].*stepCount);
-
-if evalRuns
-    totalSteps = 0:20000:300000;
-end
+uniqueSteps = sort(uniqueSteps); %%%%%%%%%%%%%%%%%%%%% This might mess up order of data, i.e. x values are sorted but y values are no longer corresponding to them %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+totalSteps = uniqueSteps;
 
 totalStepsVec = [];
 k=0;
@@ -158,6 +123,8 @@ end
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181207_160457_.txt'); %c_puct o.5
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181221_161257_newActionSpace.txt');
 % rm = load('./Logs/dpwAndRefAndIdleModelsDistance_exit_lane_181221_161903_newActionSpace_cpuct0p5.txt'); %c_puct o.5
+
+
 
 
 dpwReward = rm(:,2);
@@ -191,14 +158,6 @@ normWrtDpwAz = squeeze(sortedData(:,10,:))'./dpwCorrectedTime';
 normWrtIdleRef = refCorrectedTime./idleCorrectedTime;
 normWrtIdleAz = squeeze(sortedData(:,10,:))'./idleCorrectedTime';
 normWrtIdleDpw = dpwCorrectedTime./idleCorrectedTime;
-
-
-refActions = rm(:,24:26);
-dpwActions = rm(:,20:23);
-dpwActionsMissingIdle = dpwTime/0.75 - sum(dpwActions,2);
-dpwActions = [dpwActionsMissingIdle dpwActions];
-sum(refActions,1)/sum(sum(refActions))
-sum(dpwActions,1)/sum(sum(dpwActions))
 
 
 %% NN policy

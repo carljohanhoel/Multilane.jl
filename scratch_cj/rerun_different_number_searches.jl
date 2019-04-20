@@ -25,10 +25,10 @@ tree_in_info = false
 # network_to_load = "181126_155336_driving_Cpuct_0p1_Dpw_0p3_V_min_10_Big_replay_Truck_dim_Weights_1_10"
 network_to_load = "181221_153735_driving_Cpuct_0p1_Bigger_net_New_action_space"
 
-sample_to_load = "381"
-sample_to_load = "1141"
-sample_to_load = "2091"
-sample_to_load = "3041"
+# sample_to_load = "381"
+# sample_to_load = "1141"
+# sample_to_load = "2091"
+# sample_to_load = "3041"
 # sample_to_load = "4181"
 # sample_to_load = "5131"
 # sample_to_load = "6081"
@@ -51,7 +51,6 @@ sample_to_load = "13111"
 # network_to_load = "181215_121952_driving_exit_lane_Cpuct_0p5_Dpw_0p3_Big_replay_Truck_dim_Terminal_state_Est_v0_R_plus_19"
 # network_to_load = "190128_142353_driving_exit_lane_Cpuct_0p1_Bigger_net_New_action_space_No_batchnorm"
 
-# sample_to_load = "15011"
 # sample_to_load = "1035"
 # sample_to_load = "2054"
 # sample_to_load = "3056"
@@ -59,6 +58,7 @@ sample_to_load = "13111"
 # sample_to_load = "5050"
 # sample_to_load = "6041"
 
+# sample_to_load = "15038"
 
 
 logs_path = "/home/cj/2018/Stanford/Code/Multilane.jl/Logs/"
@@ -76,7 +76,7 @@ planner = []   #Needs to be defines so can us include visualize_value_action
 process = []   #Needs to be defines so can us include visualize_value_action
 ##
 #Possibly add loop here, loop over process
-for process in 3:102
+for process in 93:102
 # for process in 72:102
 # process = 5
 i=process-2
@@ -148,6 +148,7 @@ end
 #Save result to file
 log = MCTS.create_eval_log(sim_problem, hist, process, parse(Int,sample_to_load))
 log[1][2] = solver.n_iterations
+# open(logs_path*network_to_load*"/Reruns/"*"evalResults2_searches_"*sample_to_load*".txt","a") do f
 open(logs_path*network_to_load*"/Reruns/"*"evalResults2_searches_"*sample_to_load*".txt","a") do f
     writedlm(f, log, " ")
 end

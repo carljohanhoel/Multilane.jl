@@ -95,6 +95,6 @@ step = 0
 
     push!(frames, visualize_with_nn(sim_problem,s,a,r,v0,p0_vec, p0_vec_all_actions, p_nn, p_tree))
 end
-# gifname = logs_path*network_to_load*"/Reruns/"*"sample_"*sample_to_load*"_process_"*string(process)*"_options_"*network_to_load*".ogv"
+gifname = logs_path*network_to_load*"/Reruns/"*"sample_"*sample_to_load*"_process_"*string(process)*"_options_"*network_to_load*".ogv"
 gifname = gifname[1:end-4]*"_options.ogv"
 write(gifname, frames)   #The bad quality probably has something to do with the creation of the video. The frames themselves look good. Also, with a smaller fps, it looks good.

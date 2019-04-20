@@ -1,3 +1,6 @@
+%Use figure 1 and 4!!!
+
+
 plotResultsContinuousDrive;
 
 close all
@@ -10,6 +13,8 @@ figHeight = 230;
 
 plotMaxMin = false;
 
+xmin = 0;
+xmax = 2.6e5;
 ticksX = [0 1 2 3]*1e5;
 ticksNorm = [0.9 1.0 1.1];
 % axisVal = [0 3000000 0 1];
@@ -31,13 +36,18 @@ ylabel('Mean reward per step')
 ylabel('$$\bar{r}$$','Interpreter','Latex')
 
 xticks(ticksX)
-yticks([0.8 0.9 1.0])
+yticks([0.8 0.85 0.9 0.95 1.0])
 hAxes = gca;
 hAxes.XAxis.Exponent = 5;
 set(gca,'FontName','Times','FontSize',12)
 % lgd1 = legend('Agent1_{CNN}','Agent2_{CNN}','Agent1_{FCNN}','Agent2_{FCNN}');
 % % lgd1.FontSize = 10;
 % set(lgd1,'Position',[0.69 0.27 0.1933 0.4239])
+
+axis([xmin xmax 0.9 1.0])
+
+tix=get(gca,'ytick')';
+set(gca,'yticklabel',num2str(tix,'%.2f'))
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -48,7 +58,7 @@ hold on
 plot(totalStepsVec,mean(idleDistance)/nSimSteps/dt*ones(1,length(step)),'r-.')
 plot(totalStepsVec,mean(refDistance)/nSimSteps/dt*ones(1,length(step)),'g-.')
 plot(totalStepsVec,mean(dpwDistance)/nSimSteps/dt*ones(1,length(step)),'m-.')
-plot(totalSteps,squeeze(mean(sortedData(1:20,3,:),'omitnan'))/nSimSteps/dt,'b')  
+plot(totalSteps,squeeze(mean(sortedData(:,3,:),'omitnan'))/nSimSteps/dt,'b')  
 plot(totalStepsVec,ones(1,length(step))*25,'k-.')
 
 xlabel('Training step')
@@ -84,7 +94,7 @@ plot(totalStepsVec,ones(1,length(step))*mean(normWrtIdle25),'k-.')
 
 xlabel('Training step')
 ylabel('Normalized mean distance')
-ylabel('$$\bar{d}/\bar{d}_\mathrm{IDM}$$','Interpreter','Latex')
+ylabel('$$\bar{v}/\bar{v}_\mathrm{IDM}$$','Interpreter','Latex')
 
 xticks(ticksX)
 yticks(ticksNorm)
@@ -102,30 +112,35 @@ set(lgd3,'Position',lgdPos1)
 figure(4)
 clf(4)
 hold on
-plot(totalStepsVec,ones(1,length(step))*mean(normIdleDistance),'r-.')
-plot(totalStepsVec,ones(1,length(step)),'g-.')
-plot(totalStepsVec,ones(1,length(step))*mean(normDpwDistance),'m-.')
+plot(totalStepsVec,ones(1,length(step))*mean(normWrtRef25),'k:')
 plot(totalSteps,mean(normDistance,2,'omitnan'),'b')
+errorbar(totalSteps,mean(normDistance,2,'omitnan'),std(normDistance','omitnan')/sqrt(size(normDistance,2)),'b','HandleVisibility','off')
+plot(totalStepsVec,ones(1,length(step))*mean(normDpwDistance),'m-.')
+plot(totalStepsVec,ones(1,length(step)),'g--')
+plot(totalStepsVec,ones(1,length(step))*mean(normIdleDistance),'r:')
 if plotMaxMin
     plot(totalSteps,min(normDistance,[],2),'b--')
     plot(totalSteps,max(normDistance,[],2),'b--')
 end
-% errorbar(totalSteps,mean(normDistance,2,'omitnan'),std(normDistance','omitnan')/sqrt(length(uniqueSteps)),'b')
-plot(totalStepsVec,ones(1,length(step))*mean(normWrtRef25),'k-.')
+
 
 xlabel('Training step')
 ylabel('Normalized mean distance')
-ylabel('$$\bar{d}/\bar{d}_\mathrm{IDM/MOBIL}$$','Interpreter','Latex')
+ylabel('$$\bar{v}/\bar{v}_\mathrm{IDM/MOBIL}$$','Interpreter','Latex')
 
 xticks(ticksX)
-yticks(ticksNorm)
+yticks([0.8 0.85 0.9 0.95 1.0 1.05 1.1])
 hAxes = gca;
 hAxes.XAxis.Exponent = 5;
 set(gca,'FontName','Times','FontSize',12)
-lgd4 = legend('IDM','IDM/MOBIL','MCTS','MCTS/RL','Empty road');
+lgd4 = legend('Empty road','MCTS/NN','MCTS','IDM/MOBIL','IDM');
 % lgd1.FontSize = 10;
 set(lgd4,'Position',lgdPos1)
 
+axis([xmin xmax 0.95 1.1])
+
+tix=get(gca,'ytick')';
+set(gca,'yticklabel',num2str(tix,'%.2f'))
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Norm with MCTS performance
@@ -194,7 +209,7 @@ set(gca,'FontName','Times','FontSize',12)
 
 figure(12)
 histogram(normWrtDpwAz(end,:),nbBins,'Normalization','probability');
-xlabel('$$\bar{d}/\bar{d}_\mathrm{IDM/MOBIL}$$','Interpreter','Latex')
+xlabel('$$\bar{d}/\bar{d}_\mathrm{MCTS}$$','Interpreter','Latex')
 % axis(setAxis);
 yticks(ticksY);
 mu2 = mean(normWrtDpwAz(end,:));
@@ -209,3 +224,21 @@ set(gcf,'renderer','Painters')
 set(figure(12), 'Position', [800, 100, figWidth, figHeight])
 set(gcf,'renderer','Painters')
 
+
+%% Create a broken axis
+% 
+% figure(1)
+% axis([xmin xmax 0.88 0.97])
+% yticks([0.88 0.9 0.95 1.0])
+% break_axis('length',0.15,'bottom_reset','0.0','position',0.89)
+% 
+% 
+% 
+% figure(4)
+% axis([xmin xmax 0.92 1.1])
+% yticks([0.92 1.0 1.1])
+% break_axis('length',0.15,'bottom_reset','0.0','position',0.938)
+% 
+% tix=get(gca,'ytick')';
+% tix(1) = 0;
+% set(gca,'yticklabel',num2str(tix,'%.1f'))

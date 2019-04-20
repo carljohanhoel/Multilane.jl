@@ -943,6 +943,7 @@ function initial_braking_exit_state(p::NoCrashProblem)
     push!(is.cars, CarState(280., 2, v_start, 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 4))
     push!(is.cars, CarState(300., 2, v_start, 0.0, car_behavior_timid, pp.l_car, pp.w_car, 5))
     push!(is.cars, CarState(300., 3, v_start, 0.0, car_behavior_timid, pp.l_car, pp.w_car, 6))
+    push!(is.cars, CarState(290., 1, v_start, 0.0, car_behavior_aggressive, pp.l_car, pp.w_car, 7))
 
 
     # push!(is.cars, CarState(310., 2, 22., 0.0, car_behavior_timid, pp.l_car, pp.w_car, 5))

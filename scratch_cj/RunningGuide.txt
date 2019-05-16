@@ -1,0 +1,13 @@
+To start training, run initial_test_az_mcts.jl
+   Choose continuous or exit case in the beginning of the file
+   Most parameters are set in parameters.jl
+
+To run the IDM/MOBIL model: run_reference_model.jl
+To run with only the neural network policy: run_through_eval_samples_with_prior_policy.jl
+   Choose which network in the beginning of the file
+To run an already trained model: rerun_trained_model.jl
+To get action and value map for empty road: action_map.jl
+To visualize the value of different states and what the prior policy says, first run rerun_trained_model.jl and then run visualize_value_action.jl
+To create a video from the logfiles: create_video_from_eval_runs.jl
+To run trained agent with different number of MCTS searches: rerun_different_number_searches.jl
+Special overtaking cases for the paper: run_special_case.jl
